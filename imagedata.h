@@ -18,8 +18,8 @@ color CheckerBoardData[] =
 
 #define I .8,.8,.8,
 #define J .7,.7,.7,
-#define D .5,.3,.2,
-#define L .7,.4,.2,
+#define D .5,.4,.2,
+#define L .7,.5,.2,
 
 color BrickData[] =
 {

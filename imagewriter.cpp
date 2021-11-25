@@ -28,13 +28,15 @@ main(int ArgCount, char** Args)
 	
 	memory_arena Arena = MakeArena(1024*1024*1024, 16);
 	surface Surface = {};
-	Surface.Width = 16;
-	Surface.Height = 16;
+	Surface.Width = 2;
+	Surface.Height = 2;
 	Surface.Pixels = (color*)CheckerBoardData;
 	
-	Success = WriteTGA(&Surface, "checkerboard.tga", &Arena);
+	Success = WriteTGA(&Surface, "../data/checkerboard.tga", &Arena);
+	Surface.Width = 16;
+	Surface.Height = 16;
 	Surface.Pixels = (color*)BrickData;
-	Success = WriteTGA(&Surface, "bricks.tga", &Arena);
+	Success = WriteTGA(&Surface, "../data/bricks.tga", &Arena);
 	
 	return !Success;
 }
