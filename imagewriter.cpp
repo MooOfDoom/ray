@@ -32,11 +32,11 @@ main(int ArgCount, char** Args)
 	Surface.Height = 2;
 	Surface.Pixels = (color*)CheckerBoardData;
 	
-	Success = WriteTGA(&Surface, "../data/checkerboard.tga", &Arena);
+	Success = WriteTGA(&Surface, "data/checkerboard.tga", &Arena);
 	Surface.Width = 16;
 	Surface.Height = 16;
 	Surface.Pixels = (color*)BrickData;
-	Success = WriteTGA(&Surface, "../data/bricks.tga", &Arena);
+	Success = WriteTGA(&Surface, "data/bricks.tga", &Arena);
 	
 	return !Success;
 }

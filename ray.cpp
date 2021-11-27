@@ -421,8 +421,8 @@ DefaultOptions()
 	command_options Default =
 	{
 		false,
-		"../scene.scn",
-		"render.tga",
+		"scene.scn",
+		"output/render.tga",
 		400,
 		16,
 		4,
