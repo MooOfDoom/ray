@@ -3,11 +3,11 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --qos=debug
 #SBATCH --nodes=1
-#SBATCH --time=01:00:00
+#SBATCH --time=00:30:00
 #SBATCH --cpu-freq=1400000
-#SBATCH --job-name=job-mid
-#SBATCH --output=stats/job-mid.o%j
-#SBATCH --error=stats/job-mid.e%j
+#SBATCH --job-name=job-low
+#SBATCH --output=stats/job-low.o%j
+#SBATCH --error=stats/job-low.e%j
 
 # set some openmp variables: 
 # OMP_PLACES=threads maps OpenMP threads to hardware threads
