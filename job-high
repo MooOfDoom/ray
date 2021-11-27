@@ -1,0 +1,49 @@
+#!/bin/bash -l
+#SBATCH --constraint=knl
+#SBATCH --cpus-per-task=1
+#SBATCH --qos=debug
+#SBATCH --nodes=1
+#SBATCH --time=00:30:00
+#SBATCH --cpu-freq=1400000
+#SBATCH --job-name=job-high
+#SBATCH --output=stats/job-high.o%j
+#SBATCH --error=stats/job-high.e%j
+
+# set some openmp variables: 
+# OMP_PLACES=threads maps OpenMP threads to hardware threads
+# OMP_PROC_BIND=spread binds threads as evenly as possible
+#
+# see https://docs.nersc.gov/jobs/affinity/ for more information
+
+export OMP_PLACES=threads
+export OMP_PROC_BIND=spread
+
+# iterate over some number of threads. You will need to modify this for HW3 to reflect
+# the levels of concurrency in the assignment
+
+# Note: only OpenMP codes have interaction with the OMP_NUM_THREADS env variable, 
+# non-OpenMP jobs are not affected 
+
+# setting OMP_NUM_THREADS=t has no effect on non-OpenMP jobs
+
+# make use of the OMP_SCHEDULE environment variable to set the thread scheduling 
+# algorithm. HW3 asks you to compare static and dynamic scheduling, so select one
+# of these two to select a specific thread scheduling algorithm:
+
+export OMP_SCHEDULE=static
+# export OMP_SCHEDULE=dynamic
+
+for t in 16 32 64 128 256
+   do
+   export OMP_NUM_THREADS=$t
+   for r in 256 512
+      do
+      for p in 1 2 4 8 16 32 64
+         do
+         for b in 1 2 3 4 5 6 7 8
+            do
+            srun -n 1 build/ray -r $r -p $p -b $b
+         done
+      done
+   done
+done
