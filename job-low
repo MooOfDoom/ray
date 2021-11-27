@@ -21,7 +21,7 @@ export OMP_PROC_BIND=spread
 export OMP_SCHEDULE=static
 # export OMP_SCHEDULE=dynamic
 
-for t in 8 16
+for t in 4
    do
    export OMP_NUM_THREADS=$t
    for r in 256 512
