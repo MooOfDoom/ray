@@ -12,13 +12,13 @@ Textures
 Plane (Normal = (0, 0, 1), Displacement = 0)
 {
 	Color = (0.5, 0.5, 0.5),
-	# Glossy = 0.02,
+	Glossy = 0.02,
 }
 
 Sphere (Center = (0, 0, 2), Radius = 1)
 {
 	Color = (0.9, 0.1, 0.1),
-	# Glossy = 0.9,
+	Glossy = 0.9,
 	# Translucency = 0.2,
 	# Refraction = 0.05,
 }
@@ -92,7 +92,7 @@ Triangle (Vertices = ((2, 0, 0), (1, 0.1, 1), (0, 0, 0)))
 	# We could specify some UV coordinates to texture things here...
 	Texture = 1,
 	UVMap = ((0, 4), (0, 0), (4, 0)),
-	# Glossy = 0.1,
+	Glossy = 0.1,
 }
 
 Parallelogram (Origin = (-1.5, -1, -0.5), Axes = ((0.5, 1, 1), (-0.1, 0, 1)))
@@ -100,7 +100,7 @@ Parallelogram (Origin = (-1.5, -1, -0.5), Axes = ((0.5, 1, 1), (-0.1, 0, 1)))
 	# Color = (0.1, 0.1, 0.9),
 	Texture = 2,
 	UVMap = ((0, 0), (2, 0), (0, 2)),
-	# Glossy = 0.1,
+	Glossy = 0.1,
 }
 
 Camera (Origin = (0, -5, 0.75), DistToSurface = 1, SurfaceWidth = 1, SurfaceHeight = 1)

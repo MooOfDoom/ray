@@ -54,7 +54,7 @@ typedef struct tga_header
 function color
 ColorFromRGB24(u8 R, u8 G, u8 B)
 {
-#ifndef NO_GAMMA_CORRECTION
+#ifdef NO_GAMMA_CORRECTION
 	color Result =
 	{
 		(f32)R/255.0f,
@@ -76,11 +76,11 @@ ColorFromRGB24(u8 R, u8 G, u8 B)
 function u8
 U8FromColorComponent(f32 C)
 {
-#ifndef NO_GAMMA_CORRECTION
-	u8 Result = sqrtf(Clamp01(C))*255.0f;
+#ifdef NO_GAMMA_CORRECTION
+	u8 Result = Clamp01(C)*255.0f;
 #else
 	// Approximate gamma correction
-	u8 Result = Clamp01(C)*255.0f;
+	u8 Result = sqrtf(Clamp01(C))*255.0f;
 #endif
 	return Result;
 }
