@@ -16,5 +16,17 @@ add_executable (ray ray.cpp)
 target_compile_features(ray PRIVATE cxx_std_11)
 target_compile_options(ray PRIVATE -fopenmp)
 target_link_options(ray PRIVATE -fopenmp)
+
 add_executable (imagewriter imagewriter.cpp)
 target_link_libraries(imagewriter m)
+
+add_executable (raybasic ray_basic.cpp)
+target_compile_features(raybasic PRIVATE cxx_std_11)
+target_compile_options(raybasic PRIVATE -fopenmp)
+target_link_options(raybasic PRIVATE -fopenmp)
+
+add_executable (raybasic_nogamma ray_basic.cpp)
+target_compile_definitions(raybasic_nogamma PRIVATE NO_GAMMA_CORRECTION=1)
+target_compile_features(raybasic_nogamma PRIVATE cxx_std_11)
+target_compile_options(raybasic_nogamma PRIVATE -fopenmp)
+target_link_options(raybasic_nogamma PRIVATE -fopenmp)

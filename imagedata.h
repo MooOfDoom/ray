@@ -18,10 +18,10 @@ color CheckerBoardData[] =
 
 #define I .8,.8,.8,
 #define J .7,.7,.7,
-#define D .5,.4,.2,
+#define D .5,.3,.2,
 #define L .7,.5,.2,
 
-color BrickData[] =
+color DetailBrickData[] =
 {
 	I J I J I J I J I J I J I J I J
 	J I J J J J J J J J J J J J J J
@@ -43,5 +43,45 @@ color BrickData[] =
 
 #undef I
 #undef J
+#undef D
+#undef L
+
+#define I .9,.9,.9,
+#define D .5,.1,.1,
+#define L .9,.1,.1,
+
+color OldBrickData[] =
+{
+	I I I I I I I I
+	D I D D D D D D
+	L I D D L D L D
+	L I D L D L D L
+	I I I I I I I I
+	D D D D D I D D
+	L D L D L I D D
+	D L D L L I D L
+};
+
+#undef I
+#undef D
+#undef L
+
+#define I .9,.9,.9,
+#define D .5,.5,.1,
+#define L .9,.9,.1,
+
+color YellowBrickData[] =
+{
+	I I I I I I I I
+	D I D D D D D D
+	L I D D L D L D
+	L I D L D L D L
+	I I I I I I I I
+	D D D D D I D D
+	L D L D L I D D
+	D L D L L I D L
+};
+
+#undef I
 #undef D
 #undef L
