@@ -65,23 +65,3 @@ color OldBrickData[] =
 #undef I
 #undef D
 #undef L
-
-#define I .9,.9,.9,
-#define D .5,.5,.1,
-#define L .9,.9,.1,
-
-color YellowBrickData[] =
-{
-	I I I I I I I I
-	D I D D D D D D
-	L I D D L D L D
-	L I D L D L D L
-	I I I I I I I I
-	D D D D D I D D
-	L D L D L I D D
-	D L D L L I D L
-};
-
-#undef I
-#undef D
-#undef L

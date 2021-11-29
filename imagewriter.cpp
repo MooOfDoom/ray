@@ -44,10 +44,5 @@ main(int ArgCount, char** Args)
 	Surface.Pixels = (color*)OldBrickData;
 	Success = WriteTGA(&Surface, "data/oldbricks.tga", &Arena) && Success;
 	
-	Surface.Width = 8;
-	Surface.Height = 8;
-	Surface.Pixels = (color*)YellowBrickData;
-	Success = WriteTGA(&Surface, "data/yellowbricks.tga", &Arena) && Success;
-	
 	return !Success;
 }
