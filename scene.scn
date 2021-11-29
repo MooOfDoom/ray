@@ -6,7 +6,7 @@
 Textures
 {
 	1 = "data/checkerboard.tga",
-	2 = "data/yellowbricks.tga",
+	2 = "data/bricks.tga",
 }
 
 Plane (Normal = (0, 0, 1), Displacement = 0)
