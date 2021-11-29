@@ -1,0 +1,14 @@
+Options:
+SceneFile: 'scene.scn'
+OutputFile: 'output/render.tga'
+VerticalResolution: 512
+SamplesPerPixel: 32
+MaxBounces: 8
+4 Threads...
+Thread 0: 326008862 rays cast, 3586097482 objects checked, 134217728 samples computed
+Thread 1: 347964257 rays cast, 3827606827 objects checked, 134217728 samples computed
+Thread 2: 330782460 rays cast, 3638607060 objects checked, 134217728 samples computed
+Thread 3: 174795223 rays cast, 1922747453 objects checked, 134217728 samples computed
+--------
+Overall: 1179550802 rays cast, 12975058822 objects checked, 536870912 samples computed
+	Time:	450.1817 (s)
