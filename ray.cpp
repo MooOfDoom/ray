@@ -23,15 +23,9 @@
 #include <omp.h>
 #include <chrono>
 
-#include "parser.cpp"
+#include "spatialpartition.h"
 
-typedef struct ray_trace_stats
-{
-	s64 RaysCast;
-	s64 ObjectsChecked;
-	s64 SamplesComputed;
-	s64 Padding[5];
-} ray_trace_stats;
+#include "parser.cpp"
 
 function ray_hit
 RayIntersectScene(v3 RayOrigin, v3 RayDir, scene* Scene)
@@ -84,6 +78,7 @@ RayIntersectScene(v3 RayOrigin, v3 RayDir, scene* Scene)
 					}
 				}
 			} break;
+			
 			case Obj_Triangle:
 			{
 				v3 AB = Object->Triangle.Vertex[1] - Object->Triangle.Vertex[0];
@@ -156,7 +151,7 @@ RayIntersectScene(v3 RayOrigin, v3 RayDir, scene* Scene)
 			
 			default:
 			{
-				fprintf(stderr, "Hit unknown object!\n");
+				fprintf(stderr, "Error: Encountered object of type %d in RayIntersectScene!\n", Object->Type);
 			} break;
 		}
 	}
@@ -165,8 +160,9 @@ RayIntersectScene(v3 RayOrigin, v3 RayDir, scene* Scene)
 }
 
 function void
-RayTrace(scene* Scene, surface* Surface, s32 SamplesPerPixel, s32 MaxBounces, memory_arena* Arena, b32 DebugOn)
+RayTrace(scene* Scene, surface* Surface, s32 SamplesPerPixel, s32 MaxBounces, memory_arena* ScratchArena, b32 DebugOn)
 {
+	temporary_memory Temp = BeginTemporaryMemory(ScratchArena);
 	b32 HitTexture = false; // Debug purposes
 	s32 HitTranslucency = 0; // Debug purposes
 	
@@ -177,8 +173,9 @@ RayTrace(scene* Scene, surface* Surface, s32 SamplesPerPixel, s32 MaxBounces, me
 	f32 SampleWeight = 1.0f / (SamplesPerPixel*SamplesPerPixel);
 	v3 SurfaceOrigin = Scene->Camera.XAxis*(-0.5f*Scene->Camera.SurfaceWidth + 0.5f*SampleWidth) + Scene->Camera.YAxis*(-0.5f*Scene->Camera.SurfaceHeight + 0.5f*SampleHeight) - Scene->Camera.ZAxis*Scene->Camera.DistToSurface;
 	
-	SetAlignment(Arena, 64); // Make sure to align to cache lines to avoid false sharing
-	ray_trace_stats* AllStats = PushArray(Arena, 0, ray_trace_stats); // Just find the location of the start, reserve the right number later ;)
+	s64 OldAlignment = ScratchArena->Alignment;
+	SetAlignment(ScratchArena, 64); // Make sure to align to cache lines to avoid false sharing
+	ray_trace_stats* AllStats = PushArray(ScratchArena, 0, ray_trace_stats); // Just find the location of the start, reserve the right number later ;)
 	s32 NumThreads;
 	#pragma omp parallel
 	{
@@ -348,7 +345,7 @@ RayTrace(scene* Scene, surface* Surface, s32 SamplesPerPixel, s32 MaxBounces, me
 			AllStats[ThreadNum] = Stats;
 		}
 	}
-	PushArray(Arena, NumThreads, ray_trace_stats); // Actually reserve the space :)
+	PushArray(ScratchArena, NumThreads, ray_trace_stats); // Actually reserve the space :)
 	
 	ray_trace_stats OverallStats = {};
 	for (s32 Index = 0; Index < NumThreads; ++Index)
@@ -362,6 +359,9 @@ RayTrace(scene* Scene, surface* Surface, s32 SamplesPerPixel, s32 MaxBounces, me
 	printf("--------\n");
 	printf("Overall: %ld rays cast, %ld objects checked, %ld samples computed\n",
 		OverallStats.RaysCast, OverallStats.ObjectsChecked, OverallStats.SamplesComputed);
+	
+	EndTemporaryMemory(Temp);
+	SetAlignment(ScratchArena, OldAlignment);
 }
 
 function surface
@@ -412,6 +412,7 @@ typedef struct command_options
 	s32 VerticalResolution;
 	s32 SamplesPerPixel;
 	s32 MaxBounces;
+	b32 UseSpatialPartition;
 	b32 Debug;
 } command_options;
 
@@ -421,11 +422,12 @@ DefaultOptions()
 	command_options Default =
 	{
 		false,
-		"scene.scn",
+		"data/scene.scn",
 		"output/render.tga",
-		400,
+		512,
 		16,
 		4,
+		true,
 		false,
 	};
 	return Default;
@@ -531,6 +533,10 @@ ParseArgs(int ArgCount, char** Args)
 				fprintf(stderr, "No argument given after --bounces\n");
 			}
 		}
+		else if (CStrEq(Arg, "-ns") || CStrEq(Arg, "--no-spatial-partition"))
+		{
+			Options.UseSpatialPartition = false;
+		}
 		else if (CStrEq(Arg, "-d") || CStrEq(Arg, "--debug"))
 		{
 			Options.Debug = true;
@@ -564,26 +570,75 @@ main(int ArgCount, char** Args)
 			Options.SamplesPerPixel);
 		printf("MaxBounces: %d\n",
 			Options.MaxBounces);
+		printf("UseSpatialPartition: %s\n",
+			Options.UseSpatialPartition ? "true" : "false");
+		printf("Debug: %s\n",
+			Options.Debug ? "true" : "false");
 		memory_arena Arena = MakeArena(1024*1024*1024, 16);
+		memory_arena ScratchArena = MakeArena(1024*1024*1024, 16);
 		scene Scene = {};
-		Success = LoadSceneFromFile(Options.SceneFile, &Scene, &Arena);
+		Success = LoadSceneFromFile(Options.SceneFile, &Scene, &Arena, &ScratchArena);
 		if (Success)
 		{
+			std::chrono::time_point<std::chrono::high_resolution_clock> StartTime;
+			std::chrono::time_point<std::chrono::high_resolution_clock> EndTime;
+			std::chrono::duration<double> ElapsedTime;
+			
+			spatial_partition Partition;
+			if (Options.UseSpatialPartition)
+			{
+				StartTime = std::chrono::high_resolution_clock::now();
+				
+				Partition = GenerateSpatialPartition(&Scene, &Arena, &ScratchArena);
+				
+				EndTime = std::chrono::high_resolution_clock::now();
+				ElapsedTime = EndTime - StartTime;
+				printf("Time to build spatial partition: %6.4f (s) \n", ElapsedTime.count());
+				printf("Spatial Partition:\n");
+				printf("\tRootNode:\n");
+				PrintNode(Partition.RootNode, 2);
+				printf("\t\tChild[0]:\n");
+				PrintNode(Partition.RootNode->Children[0], 3);
+				// printf("\t\t\tChild[00]:\n");
+				// PrintNode(Partition.RootNode->Children[0]->Children[0], 4);
+				// printf("\t\t\tChild[01]:\n");
+				// PrintNode(Partition.RootNode->Children[0]->Children[1], 4);
+				printf("\t\tChild[1]:\n");
+				PrintNode(Partition.RootNode->Children[1], 3);
+				printf("\tObjectCount = %d\n", Partition.ObjectCount);
+				printf("\tObjectIndices = [");
+				for (s32 Index = 0; Index < Partition.ObjectCount; ++Index)
+				{
+					if (Index > 0)
+					{
+						printf(", ");
+					}
+					printf("%d", Partition.ObjectIndices[Index]);
+				}
+				printf("]\n");
+			}
 			f32 AspectRatio = Scene.Camera.SurfaceWidth / Scene.Camera.SurfaceHeight;
 			s32 HorizontalResolution = (s32)(AspectRatio * (f32)Options.VerticalResolution);
 			surface Surface = CreateSurface(HorizontalResolution, Options.VerticalResolution, &Arena);
 			
-			std::chrono::time_point<std::chrono::high_resolution_clock> StartTime = std::chrono::high_resolution_clock::now();
+			StartTime = std::chrono::high_resolution_clock::now();
 			
-			RayTrace(&Scene, &Surface, Options.SamplesPerPixel, Options.MaxBounces, &Arena, Options.Debug);
+			if (Options.UseSpatialPartition)
+			{
+				RayTrace(&Scene, &Partition, &Surface, Options.SamplesPerPixel, Options.MaxBounces, &ScratchArena, Options.Debug);
+			}
+			else
+			{
+				RayTrace(&Scene, &Surface, Options.SamplesPerPixel, Options.MaxBounces, &ScratchArena, Options.Debug);
+			}
 			
-			std::chrono::time_point<std::chrono::high_resolution_clock> EndTime = std::chrono::high_resolution_clock::now();
-			std::chrono::duration<double> ElapsedTime = EndTime - StartTime;
-			printf("\tTime:\t%6.4f (s) \n", ElapsedTime.count());
+			EndTime = std::chrono::high_resolution_clock::now();
+			ElapsedTime = EndTime - StartTime;
+			printf("Time to render scene: %6.4f (s) \n", ElapsedTime.count());
 			
-			Success = WriteTGA(&Surface, Options.OutputFile, &Arena);
+			Success = WriteTGA(&Surface, Options.OutputFile, &ScratchArena);
 			// surface TextureTest = Scene.Textures[2];
-			// Success = WriteTGA(&TextureTest, Args[2], &Arena);
+			// Success = WriteTGA(&TextureTest, Args[2], &ScratchArena);
 			if (!Success)
 			{
 				fprintf(stderr, "Error writing render to output file: '%s'\n", Options.OutputFile);
@@ -598,7 +653,7 @@ main(int ArgCount, char** Args)
 	}
 	else
 	{
-		fprintf(stderr, "Usage: %s -s <scene.scn> -o <render.tga> -r <vertical resolution> -p <samples per pixel> -b <max bounces>\n", Args[0]);
+		fprintf(stderr, "Usage: %s -s <scene.scn> -o <render.tga> -r <vertical resolution> -p <samples per pixel> -b <max bounces> [-ns] [-d]\n", Args[0]);
 	}
 	
 	return !Success;

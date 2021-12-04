@@ -60,6 +60,28 @@ PushSize(memory_arena* Arena, s64 Size)
 	return NewAllocStart;
 }
 
+function b32
+HasRoom(memory_arena* Arena, s64 Size)
+{
+	u8* NewAllocStart = (u8*)AlignUp((s64)(Arena->Start + Arena->Allocated), Arena->Alignment);
+	b32 Result = (NewAllocStart + Size - Arena->Start <= Arena->Capacity);
+	return Result;
+}
+
+#define PushCopyArray(Arena, Count, Array) PushCopyArray_(Arena, Count, sizeof(Array[0]), (u8*)Array)
+
+function u8*
+PushCopyArray_(memory_arena* Arena, s64 Count, s64 ElemSize, u8* SourceArray)
+{
+	s64 Size = Count * ElemSize;
+	u8* NewAllocStart = (u8*)PushSize(Arena, Size);
+	for (s64 Index = 0; Index < Size; ++Index)
+	{
+		NewAllocStart[Index] = SourceArray[Index];
+	}
+	return NewAllocStart;
+}
+
 function temporary_memory
 BeginTemporaryMemory(memory_arena* Arena)
 {

@@ -26,17 +26,24 @@ IsPow2(s64 Value)
 }
 
 function f32
-Clamp01(f32 Value)
+Clamp(f32 MinV, f32 Value, f32 MaxV)
 {
 	f32 Result = Value;
-	if (Result < 0)
+	if (Result < MinV)
 	{
-		Result = 0;
+		Result = MinV;
 	}
-	else if (Result > 1.0f)
+	else if (Result > MaxV)
 	{
-		Result = 1.0f;
+		Result = MaxV;
 	}
+	return Result;
+}
+
+function f32
+Clamp01(f32 Value)
+{
+	f32 Result = Clamp(0, Value, 1.0f);
 	return Result;
 }
 
@@ -47,6 +54,28 @@ Abs(f32 Value)
 	if (Result < 0)
 	{
 		Result = -Value;
+	}
+	return Result;
+}
+
+function f32
+Minimum(f32 A, f32 B)
+{
+	f32 Result = A;
+	if (A > B)
+	{
+		Result = B;
+	}
+	return Result;
+}
+
+function f32
+Maximum(f32 A, f32 B)
+{
+	f32 Result = A;
+	if (A < B)
+	{
+		Result = B;
 	}
 	return Result;
 }

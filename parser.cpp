@@ -1493,9 +1493,10 @@ LoadTextures(tokenizer* Tokenizer, scene* DestScene, memory_arena* Arena)
 }
 
 function b32
-LoadSceneFromFile(const char* FileName, scene* DestScene, memory_arena* Arena)
+LoadSceneFromFile(const char* FileName, scene* DestScene, memory_arena* Arena, memory_arena* ScratchArena)
 {
-	buffer SceneBuffer = LoadEntireFile(FileName, Arena);
+	temporary_memory Temp = BeginTemporaryMemory(ScratchArena);
+	buffer SceneBuffer = LoadEntireFile(FileName, ScratchArena);
 	
 	tokenizer Tokenizer = {};
 	Tokenizer.Buffer = SceneBuffer;
@@ -1513,8 +1514,9 @@ LoadSceneFromFile(const char* FileName, scene* DestScene, memory_arena* Arena)
 	
 	if (!Tokenizer.Error)
 	{
-		DestScene->Objects = PushArray(Arena, 0, object);
 		s64 OldAlignment = Arena->Alignment;
+		SetAlignment(Arena, 16);
+		DestScene->Objects = PushArray(Arena, 0, object);
 		SetAlignment(Arena, 1);
 		
 		while (HasMoreTokens(&Tokenizer) && !Tokenizer.Error)
@@ -1554,6 +1556,8 @@ LoadSceneFromFile(const char* FileName, scene* DestScene, memory_arena* Arena)
 		
 		SetAlignment(Arena, OldAlignment);
 	}
+	
+	EndTemporaryMemory(Temp);
 	
 	b32 Success = !Tokenizer.Error;
 	return Success;
