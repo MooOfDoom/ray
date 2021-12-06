@@ -466,7 +466,7 @@ ParseArgs(int ArgCount, char** Args)
 			printf("\tDefault: -r %d\n", Defaults.VerticalResolution);
 			printf("-p, --samples\n");
 			printf("\tSpecifies the number of samples into which to divide each pixel\n");
-			printf("\tvertically and horizontally.\n");
+			printf("\thorizonally and vertically.\n");
 			printf("\tThe total samples per pixel will be the square of this number.\n");
 			printf("\tDefault: -p %d\n", Defaults.SamplesPerPixel);
 			printf("-b, --bounces\n");
