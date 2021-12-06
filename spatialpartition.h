@@ -4,10 +4,6 @@
  * Spatial partition for the scene
  */
 
-#define MAX_OBJECTS_PER_LEAF 4
-#define MAX_LEAF_DEPTH 30
-#define MAX_DISTANCE F32Max
-
 typedef struct rect3
 {
 	v3 Min;
@@ -556,29 +552,29 @@ GetRelativeBoundingBox(object* Object, rect3 Bounds)
 }
 
 function spatial_partition
-GenerateSpatialPartition(scene* Scene, memory_arena* Arena, memory_arena* ScratchArena)
+GenerateSpatialPartition(scene* Scene, s32 MaxObjectsPerLeaf, s32 MaxLeafDepth, f32 MaxDistance, memory_arena* Arena, memory_arena* ScratchArena)
 {
 	spatial_partition Result = {};
-	if (Scene->ObjectCount > MAX_OBJECTS_PER_LEAF)
+	if (Scene->ObjectCount > MaxObjectsPerLeaf)
 	{
 		temporary_memory Temp = BeginTemporaryMemory(ScratchArena);
 		
 		// TODO: Will we need this?
 		rect3* ObjectBoundingBoxes = PushArray(ScratchArena, Scene->ObjectCount, rect3);
 		ObjectBoundingBoxes[0] = GetObjectBoundingBox(Scene->Objects + 0);
-		printf("0: ");
-		PrintRect(ObjectBoundingBoxes[0]);
+		// printf("0: ");
+		// PrintRect(ObjectBoundingBoxes[0]);
 		rect3 RootBounds = ObjectBoundingBoxes[0];
 		for (s32 Index = 1; Index < Scene->ObjectCount; ++Index)
 		{
 			ObjectBoundingBoxes[Index] = GetObjectBoundingBox(Scene->Objects + Index);
-			printf("\n%d: ", Index);
-			PrintRect(ObjectBoundingBoxes[Index]);
+			// printf("\n%d: ", Index);
+			// PrintRect(ObjectBoundingBoxes[Index]);
 			RootBounds = Union(RootBounds, ObjectBoundingBoxes[Index]);
 		}
-		printf("\n");
+		// printf("\n");
 		
-		v3 MaxDistV = {MAX_DISTANCE, MAX_DISTANCE, MAX_DISTANCE};
+		v3 MaxDistV = {MaxDistance, MaxDistance, MaxDistance};
 		rect3 CameraBounds =
 		{
 			Scene->Camera.Origin - MaxDistV,
@@ -663,25 +659,25 @@ GenerateSpatialPartition(scene* Scene, memory_arena* Arena, memory_arena* Scratc
 			}
 		}
 		
-		printf("Initial: [");
-		for (s32 Index = 0; Index < CountLow; ++Index)
-		{
-			if (Index != 0)
-			{
-				printf(", ");
-			}
-			printf("%d", TempObjectIndices[Index]);
-		}
-		printf(" | ");
-		for (s32 Index = 0; Index < CountHigh; ++Index)
-		{
-			if (Index != 0)
-			{
-				printf(", ");
-			}
-			printf("%d", TempObjectIndices[CountLow + Index]);
-		}
-		printf("]\n");
+		// printf("Initial: [");
+		// for (s32 Index = 0; Index < CountLow; ++Index)
+		// {
+		// 	if (Index != 0)
+		// 	{
+		// 		printf(", ");
+		// 	}
+		// 	printf("%d", TempObjectIndices[Index]);
+		// }
+		// printf(" | ");
+		// for (s32 Index = 0; Index < CountHigh; ++Index)
+		// {
+		// 	if (Index != 0)
+		// 	{
+		// 		printf(", ");
+		// 	}
+		// 	printf("%d", TempObjectIndices[CountLow + Index]);
+		// }
+		// printf("]\n");
 		
 		spatial_node* Nodes = PushArray(Arena, 2, spatial_node);
 		Result.RootNode->Children[0] = Nodes + 0;
@@ -703,12 +699,12 @@ GenerateSpatialPartition(scene* Scene, memory_arena* Arena, memory_arena* Scratc
 		
 		s32 TotalIndexCount = CountLow + CountHigh;
 		
-		for (s32 Depth = 0; Depth < MAX_LEAF_DEPTH; ++Depth)
+		for (s32 Depth = 0; Depth < MaxLeafDepth; ++Depth)
 		{
-			printf("Depth: %d\n", Depth);
+			// printf("Depth: %d\n", Depth);
 			if (!HasRoom(ScratchArena, 2*TotalIndexCount*sizeof(s32)))
 			{
-				printf("wrapped\n");
+				// printf("wrapped\n");
 				EndTemporaryMemory(CircularStart);
 				CircularStart = BeginTemporaryMemory(ScratchArena);
 			}
@@ -720,7 +716,7 @@ GenerateSpatialPartition(scene* Scene, memory_arena* Arena, memory_arena* Scratc
 				break;
 			}
 			
-			printf("[");
+			// printf("[");
 			s32 IndexCount = 0;
 			b32 NodeSplit = false;
 			s32 NextChildNodeCount = ChildNodeCount;
@@ -728,7 +724,7 @@ GenerateSpatialPartition(scene* Scene, memory_arena* Arena, memory_arena* Scratc
 			{
 				// printf("\tIndex: %d\n", NodeIndex);
 				spatial_node* Node = Nodes + NodeIndex;
-				if ((Node->IsLeaf == -1) && (Node->ObjectCount > MAX_OBJECTS_PER_LEAF))
+				if ((Node->IsLeaf == -1) && (Node->ObjectCount > MaxObjectsPerLeaf))
 				{
 					if (HasRoom(Arena, 2*sizeof(spatial_node) + 2*TotalIndexCount*sizeof(s32)))
 					{
@@ -821,24 +817,24 @@ GenerateSpatialPartition(scene* Scene, memory_arena* Arena, memory_arena* Scratc
 							}
 						}
 						
-						printf(" |? ");
-						for (s32 Index = 0; Index < CountLow; ++Index)
-						{
-							if (Index != 0)
-							{
-								printf(", ");
-							}
-							printf("%d", NewTempObjectIndices[IndexCount + Index]);
-						}
-						printf(" |? ");
-						for (s32 Index = 0; Index < CountHigh; ++Index)
-						{
-							if (Index != 0)
-							{
-								printf(", ");
-							}
-							printf("%d", NewTempObjectIndices[IndexCount + CountLow + Index]);
-						}
+						// printf(" |? ");
+						// for (s32 Index = 0; Index < CountLow; ++Index)
+						// {
+						// 	if (Index != 0)
+						// 	{
+						// 		printf(", ");
+						// 	}
+						// 	printf("%d", NewTempObjectIndices[IndexCount + Index]);
+						// }
+						// printf(" |? ");
+						// for (s32 Index = 0; Index < CountHigh; ++Index)
+						// {
+						// 	if (Index != 0)
+						// 	{
+						// 		printf(", ");
+						// 	}
+						// 	printf("%d", NewTempObjectIndices[IndexCount + CountLow + Index]);
+						// }
 						
 						NextChildNodeCount += 2;
 						spatial_node* Children = PushArray(Arena, 2, spatial_node);
@@ -869,15 +865,15 @@ GenerateSpatialPartition(scene* Scene, memory_arena* Arena, memory_arena* Scratc
 						}
 						Node->FirstObjectIndex = IndexCount;
 						
-						printf(" |L ");
-						for (s32 Index = 0; Index < Node->ObjectCount; ++Index)
-						{
-							if (Index != 0)
-							{
-								printf(", ");
-							}
-							printf("%d", NewTempObjectIndices[IndexCount + Index]);
-						}
+						// printf(" |L ");
+						// for (s32 Index = 0; Index < Node->ObjectCount; ++Index)
+						// {
+						// 	if (Index != 0)
+						// 	{
+						// 		printf(", ");
+						// 	}
+						// 	printf("%d", NewTempObjectIndices[IndexCount + Index]);
+						// }
 						IndexCount += Node->ObjectCount;
 					}
 				}
@@ -891,19 +887,19 @@ GenerateSpatialPartition(scene* Scene, memory_arena* Arena, memory_arena* Scratc
 					}
 					Node->FirstObjectIndex = IndexCount;
 					
-					printf(" |L ");
-					for (s32 Index = 0; Index < Node->ObjectCount; ++Index)
-					{
-						if (Index != 0)
-						{
-							printf(", ");
-						}
-						printf("%d", NewTempObjectIndices[IndexCount + Index]);
-					}
+					// printf(" |L ");
+					// for (s32 Index = 0; Index < Node->ObjectCount; ++Index)
+					// {
+					// 	if (Index != 0)
+					// 	{
+					// 		printf(", ");
+					// 	}
+					// 	printf("%d", NewTempObjectIndices[IndexCount + Index]);
+					// }
 					IndexCount += Node->ObjectCount;
 				}
 			}
-			printf("]\n");
+			// printf("]\n");
 			
 			ChildNodeCount = NextChildNodeCount;
 			TotalIndexCount = IndexCount;

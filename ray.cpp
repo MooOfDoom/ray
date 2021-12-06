@@ -23,9 +23,8 @@
 #include <omp.h>
 #include <chrono>
 
+#include "parser.h"
 #include "spatialpartition.h"
-
-#include "parser.cpp"
 
 function ray_hit
 RayIntersectScene(v3 RayOrigin, v3 RayDir, scene* Scene)
@@ -407,12 +406,16 @@ TestRNG()
 typedef struct command_options
 {
 	b32 Error;
+	b32 PerformRender;
 	const char* SceneFile;
 	const char* OutputFile;
 	s32 VerticalResolution;
 	s32 SamplesPerPixel;
 	s32 MaxBounces;
 	b32 UseSpatialPartition;
+	s32 MaxObjectsPerLeaf;
+	s32 MaxLeafDepth;
+	f32 MaxDistance;
 	b32 Debug;
 } command_options;
 
@@ -422,12 +425,16 @@ DefaultOptions()
 	command_options Default =
 	{
 		false,
+		true,
 		"data/scene.scn",
 		"output/render.tga",
 		512,
 		16,
 		4,
 		true,
+		8,
+		32,
+		F32Max,
 		false,
 	};
 	return Default;
@@ -441,7 +448,52 @@ ParseArgs(int ArgCount, char** Args)
 	while (!Options.Error && ArgIndex < ArgCount)
 	{
 		char* Arg = Args[ArgIndex];
-		if (CStrEq(Arg, "-s") || CStrEq(Arg, "--scene"))
+		if (CStrEq(Arg, "-h") || CStrEq(Arg, "--help"))
+		{
+			command_options Defaults = DefaultOptions();
+			printf("Performs ray tracing on a .scn scene file and outputs a .tga image.\n");
+			printf("Options:\n\n");
+			printf("-s, --scene\n");
+			printf("\tSpecifies the location of the .scn file to use as input.\n");
+			printf("\tDefault: -s %s\n", Defaults.SceneFile);
+			printf("-o, --output\n");
+			printf("\tSpecifies the location of the .tga file into which to write the output.\n");
+			printf("\tDefault: -o %s\n", Defaults.OutputFile);
+			printf("-r, --resolution\n");
+			printf("\tSpecifies the vertical resolution of the output image.\n");
+			printf("\tThe horizontal resolution is calculated from the aspect ratio of the\n");
+			printf("\tsurface specified in the input scene.\n");
+			printf("\tDefault: -r %d\n", Defaults.VerticalResolution);
+			printf("-p, --samples\n");
+			printf("\tSpecifies the number of samples into which to divide each pixel\n");
+			printf("\tvertically and horizontally.\n");
+			printf("\tThe total samples per pixel will be the square of this number.\n");
+			printf("\tDefault: -p %d\n", Defaults.SamplesPerPixel);
+			printf("-b, --bounces\n");
+			printf("\tSpecifies the maximum number of bounces per ray.\n");
+			printf("\tDefault: -b %d\n", Defaults.MaxBounces);
+			printf("-ns, --no-spatial-partition\n");
+			printf("\tBoolean flag that, if present, turns off the use of the spatial\n");
+			printf("\tpartition and reverts to a flat list of all scene objects.\n");
+			printf("-ol, --objects-per-leaf\n");
+			printf("\tSpecifies the maximum number of objects per leaf in the spatial\n");
+			printf("\tpartition.\n");
+			printf("\tDefault: -ol %d\n", Defaults.MaxObjectsPerLeaf);
+			printf("-ld, --leaf-depth\n");
+			printf("\tSpecifies the maximum depth of a leaf in the spatial partition.\n");
+			printf("\tDefault: -ld %d\n", Defaults.MaxLeafDepth);
+			printf("-di, --distance\n");
+			printf("\tSpecifies the maximum distance from the camera to use as bounds for the\n");
+			printf("\tspatial partition.\n");
+			printf("\tDefault: -di %f\n", Defaults.MaxDistance);
+			printf("-d, --debug\n");
+			printf("\tBoolean flag that, if present, turns on printing of debug information.\n");
+			if (ArgCount == 2)
+			{
+				Options.PerformRender = false;
+			}
+		}
+		else if (CStrEq(Arg, "-s") || CStrEq(Arg, "--scene"))
 		{
 			++ArgIndex;
 			if (ArgIndex < ArgCount)
@@ -559,101 +611,103 @@ main(int ArgCount, char** Args)
 	command_options Options = ParseArgs(ArgCount, Args);
 	if (!Options.Error)
 	{
-		printf("Options:\n");
-		printf("SceneFile: '%s'\n",
-			Options.SceneFile);
-		printf("OutputFile: '%s'\n",
-			Options.OutputFile);
-		printf("VerticalResolution: %d\n",
-			Options.VerticalResolution);
-		printf("SamplesPerPixel: %d\n",
-			Options.SamplesPerPixel);
-		printf("MaxBounces: %d\n",
-			Options.MaxBounces);
-		printf("UseSpatialPartition: %s\n",
-			Options.UseSpatialPartition ? "true" : "false");
-		printf("Debug: %s\n",
-			Options.Debug ? "true" : "false");
-		memory_arena Arena = MakeArena(1024*1024*1024, 16);
-		memory_arena ScratchArena = MakeArena(1024*1024*1024, 16);
-		scene Scene = {};
-		Success = LoadSceneFromFile(Options.SceneFile, &Scene, &Arena, &ScratchArena);
-		if (Success)
+		if (Options.PerformRender)
 		{
-			std::chrono::time_point<std::chrono::high_resolution_clock> StartTime;
-			std::chrono::time_point<std::chrono::high_resolution_clock> EndTime;
-			std::chrono::duration<double> ElapsedTime;
-			
-			spatial_partition Partition;
-			if (Options.UseSpatialPartition)
+			printf("Options:\n");
+			printf("SceneFile: '%s'\n",
+				Options.SceneFile);
+			printf("OutputFile: '%s'\n",
+				Options.OutputFile);
+			printf("VerticalResolution: %d\n",
+				Options.VerticalResolution);
+			printf("SamplesPerPixel: %d\n",
+				Options.SamplesPerPixel);
+			printf("MaxBounces: %d\n",
+				Options.MaxBounces);
+			printf("UseSpatialPartition: %s\n",
+				Options.UseSpatialPartition ? "true" : "false");
+			printf("Debug: %s\n",
+				Options.Debug ? "true" : "false");
+			memory_arena Arena = MakeArena(1024*1024*1024, 16);
+			memory_arena ScratchArena = MakeArena(1024*1024*1024, 16);
+			scene Scene = {};
+			Success = LoadSceneFromFile(Options.SceneFile, &Scene, &Arena, &ScratchArena);
+			if (Success)
 			{
+				std::chrono::time_point<std::chrono::high_resolution_clock> StartTime;
+				std::chrono::time_point<std::chrono::high_resolution_clock> EndTime;
+				std::chrono::duration<double> ElapsedTime;
+				
+				spatial_partition Partition;
+				if (Options.UseSpatialPartition)
+				{
+					StartTime = std::chrono::high_resolution_clock::now();
+					
+					Partition = GenerateSpatialPartition(&Scene, Options.M, &Arena, &ScratchArena);
+					
+					EndTime = std::chrono::high_resolution_clock::now();
+					ElapsedTime = EndTime - StartTime;
+					printf("Time to build spatial partition: %6.4f (s) \n", ElapsedTime.count());
+					printf("Spatial Partition:\n");
+					// printf("\tRootNode:\n");
+					// PrintNode(Partition.RootNode, 2);
+					// printf("\t\tChild[0]:\n");
+					// PrintNode(Partition.RootNode->Children[0], 3);
+					// printf("\t\t\tChild[00]:\n");
+					// PrintNode(Partition.RootNode->Children[0]->Children[0], 4);
+					// printf("\t\t\tChild[01]:\n");
+					// PrintNode(Partition.RootNode->Children[0]->Children[1], 4);
+					// printf("\t\tChild[1]:\n");
+					// PrintNode(Partition.RootNode->Children[1], 3);
+					// printf("\tObjectCount = %d\n", Partition.ObjectCount);
+					// printf("\tObjectIndices = [");
+					// for (s32 Index = 0; Index < Partition.ObjectCount; ++Index)
+					// {
+					// 	if (Index > 0)
+					// 	{
+					// 		printf(", ");
+					// 	}
+					// 	printf("%d", Partition.ObjectIndices[Index]);
+					// }
+					// printf("]\n");
+				}
+				f32 AspectRatio = Scene.Camera.SurfaceWidth / Scene.Camera.SurfaceHeight;
+				s32 HorizontalResolution = (s32)(AspectRatio * (f32)Options.VerticalResolution);
+				surface Surface = CreateSurface(HorizontalResolution, Options.VerticalResolution, &Arena);
+				
 				StartTime = std::chrono::high_resolution_clock::now();
 				
-				Partition = GenerateSpatialPartition(&Scene, &Arena, &ScratchArena);
+				if (Options.UseSpatialPartition)
+				{
+					RayTrace(&Scene, &Partition, &Surface, Options.SamplesPerPixel, Options.MaxBounces, &ScratchArena, Options.Debug);
+				}
+				else
+				{
+					RayTrace(&Scene, &Surface, Options.SamplesPerPixel, Options.MaxBounces, &ScratchArena, Options.Debug);
+				}
 				
 				EndTime = std::chrono::high_resolution_clock::now();
 				ElapsedTime = EndTime - StartTime;
-				printf("Time to build spatial partition: %6.4f (s) \n", ElapsedTime.count());
-				printf("Spatial Partition:\n");
-				printf("\tRootNode:\n");
-				PrintNode(Partition.RootNode, 2);
-				printf("\t\tChild[0]:\n");
-				PrintNode(Partition.RootNode->Children[0], 3);
-				// printf("\t\t\tChild[00]:\n");
-				// PrintNode(Partition.RootNode->Children[0]->Children[0], 4);
-				// printf("\t\t\tChild[01]:\n");
-				// PrintNode(Partition.RootNode->Children[0]->Children[1], 4);
-				printf("\t\tChild[1]:\n");
-				PrintNode(Partition.RootNode->Children[1], 3);
-				printf("\tObjectCount = %d\n", Partition.ObjectCount);
-				printf("\tObjectIndices = [");
-				for (s32 Index = 0; Index < Partition.ObjectCount; ++Index)
+				printf("Time to render scene: %6.4f (s) \n", ElapsedTime.count());
+				
+				Success = WriteTGA(&Surface, Options.OutputFile, &ScratchArena);
+				// surface TextureTest = Scene.Textures[2];
+				// Success = WriteTGA(&TextureTest, Args[2], &ScratchArena);
+				if (!Success)
 				{
-					if (Index > 0)
-					{
-						printf(", ");
-					}
-					printf("%d", Partition.ObjectIndices[Index]);
+					fprintf(stderr, "Error writing render to output file: '%s'\n", Options.OutputFile);
 				}
-				printf("]\n");
-			}
-			f32 AspectRatio = Scene.Camera.SurfaceWidth / Scene.Camera.SurfaceHeight;
-			s32 HorizontalResolution = (s32)(AspectRatio * (f32)Options.VerticalResolution);
-			surface Surface = CreateSurface(HorizontalResolution, Options.VerticalResolution, &Arena);
-			
-			StartTime = std::chrono::high_resolution_clock::now();
-			
-			if (Options.UseSpatialPartition)
-			{
-				RayTrace(&Scene, &Partition, &Surface, Options.SamplesPerPixel, Options.MaxBounces, &ScratchArena, Options.Debug);
 			}
 			else
 			{
-				RayTrace(&Scene, &Surface, Options.SamplesPerPixel, Options.MaxBounces, &ScratchArena, Options.Debug);
-			}
-			
-			EndTime = std::chrono::high_resolution_clock::now();
-			ElapsedTime = EndTime - StartTime;
-			printf("Time to render scene: %6.4f (s) \n", ElapsedTime.count());
-			
-			Success = WriteTGA(&Surface, Options.OutputFile, &ScratchArena);
-			// surface TextureTest = Scene.Textures[2];
-			// Success = WriteTGA(&TextureTest, Args[2], &ScratchArena);
-			if (!Success)
-			{
-				fprintf(stderr, "Error writing render to output file: '%s'\n", Options.OutputFile);
+				fprintf(stderr, "Error loading scene from file: '%s'\n", Options.SceneFile);
 			}
 		}
-		else
-		{
-			fprintf(stderr, "Error loading scene from file: '%s'\n", Options.SceneFile);
-		}
-		
-		// TestRNG();
 	}
 	else
 	{
-		fprintf(stderr, "Usage: %s -s <scene.scn> -o <render.tga> -r <vertical resolution> -p <samples per pixel> -b <max bounces> [-ns] [-d]\n", Args[0]);
+		fprintf(stderr, "Usage: %s -s <scene.scn> -o <render.tga> -r <vertical resolution> -p <samples per pixel> -b <max bounces>\n", Args[0]);
+		fprintf(stderr, "For more info, type %s -h\n", Args[0]);
 	}
 	
 	return !Success;

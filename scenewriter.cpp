@@ -235,39 +235,6 @@ WriteScene(const char* FileName, s32 NumObjects, f32 SceneSize, memory_arena* Ar
 	return Success;
 }
 
-function void
-TestRNG()
-{
-	random_sequence RNG = SeedRandom(4815162342ull);
-	s32 Buckets[100] = {};
-	s32 NumTrials = 1000000;
-	for (s32 Index = 0; Index < NumTrials; ++Index)
-	{
-		f32 Random = RandomUnilateral(&RNG);
-		if (Index < 100)
-		{
-			printf("%.2f\n", Random);
-		}
-		for (u64 BucketIndex = 0; BucketIndex < ArrayCount(Buckets); ++BucketIndex)
-		{
-			f32 Bound = ((f32)BucketIndex + 1.0f) / (f32)ArrayCount(Buckets);
-			if (Random <= Bound)
-			{
-				++Buckets[BucketIndex];
-				break;
-			}
-		}
-	}
-	
-	// f32 Coefficient = 1.0f / NumTrials;
-	printf("Random distribution:\n");
-	for (u64 BucketIndex = 0; BucketIndex < ArrayCount(Buckets); ++BucketIndex)
-	{
-		printf("%d ", Buckets[BucketIndex]);
-	}
-	printf("\n");
-}
-
 int
 main(int ArgCount, char** Args)
 {
@@ -276,14 +243,26 @@ main(int ArgCount, char** Args)
 	if (ArgCount == 4)
 	{
 		memory_arena Arena = MakeArena(1024*1024*1024, 16);
-		Success = WriteScene(Args[1], strtol(Args[2], 0, 10), strtof(Args[3], 0), &Arena);
-		
-		// TestRNG();
+		Success = WriteScene(Args[1], strtol(Args[2], 0, 10), strtof(Args[3], 0), 4815162342ull, &Arena);
+	}
+	else if (ArgCount == 5)
+	{
+		s64 Seed = strtol(Args[4], 0, 10);
+		if (Seed)
+		{
+			memory_arena Arena = MakeArena(1024*1024*1024, 16);
+			Success = WriteScene(Args[1], strtol(Args[2], 0, 10), strtof(Args[3], 0), Seed, &Arena);
+		}
+		else
+		{
+			Success = false;
+			fprintf(stderr, "Invalid argument given as random seed: %s\n", Args[4]);
+		}
 	}
 	else
 	{
 		Success = false;
-		fprintf(stderr, "Usage: %s <destfile.scn> <num objects> <scene size>\n", Args[0]);
+		fprintf(stderr, "Usage: %s <destfile.scn> <num objects> <scene size> [<rng seed>]\n", Args[0]);
 	}
 	
 	return !Success;
