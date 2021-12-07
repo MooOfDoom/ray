@@ -34,7 +34,7 @@ for t in 64
                do
                for s in 32
                   do
-                  srun -n 1 build/ray -s data/rand_$n_$s.scn -r $r -p $p -b $b
+                  srun -n 1 build/ray -s data/rand_${n}_${s}.scn -r $r -p $p -b $b
                done
             done
          done
