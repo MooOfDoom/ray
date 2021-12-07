@@ -6,15 +6,15 @@ This is a simple ray tracer that takes a .scn scene file as input and produces a
 
 Load the correct environment modules:
 
-% module swap PrgEnv-intel PrgEnv-gnu
+% module swap PrgEnv-intel PrgEnv-gnu  
 % module load cmake
 
 After downloading, cd into the main source directory, then:
 
-% mkdir build
-% cd build
-% cmake ../
-% make
+% mkdir build  
+% cd build  
+% cmake ../  
+% make  
 % cd ..
 
 ## Running the programs
