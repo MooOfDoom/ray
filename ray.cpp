@@ -433,7 +433,7 @@ DefaultOptions()
 		4,
 		true,
 		8,
-		32,
+		30,
 		F32Max,
 		false,
 	};
@@ -629,7 +629,7 @@ main(int ArgCount, char** Args)
 			printf("Debug: %s\n",
 				Options.Debug ? "true" : "false");
 			memory_arena Arena = MakeArena(1024*1024*1024, 16);
-			memory_arena ScratchArena = MakeArena(1024*1024*1024, 16);
+			memory_arena ScratchArena = MakeArena(4ull*1024*1024*1024, 16);
 			scene Scene = {};
 			Success = LoadSceneFromFile(Options.SceneFile, &Scene, &Arena, &ScratchArena);
 			if (Success)

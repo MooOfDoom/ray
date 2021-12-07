@@ -23,6 +23,7 @@ typedef struct spatial_node
 typedef struct spatial_partition
 {
 	spatial_node* RootNode;
+	s32 LeafCount;
 	s32 ObjectCount;
 	s32* ObjectIndices;
 } spatial_partition;
@@ -914,9 +915,10 @@ GenerateSpatialPartition(scene* Scene, memory_arena* Arena, memory_arena* Scratc
 		
 		for (s32 Index = 0; Index < ChildNodeCount; ++Index)
 		{
-			if (Nodes[Index].IsLeaf == -1)
+			if (Nodes[Index].IsLeaf)
 			{
 				Nodes[Index].IsLeaf = true;
+				++Result.LeafCount;
 			}
 		}
 		
@@ -940,6 +942,7 @@ GenerateSpatialPartition(scene* Scene, memory_arena* Arena, memory_arena* Scratc
 		{
 			Result.ObjectIndices[Index] = Index;
 		}
+		Result.LeafCount = 1;
 	}
 	return Result;
 }
@@ -949,6 +952,7 @@ RayIntersectScene(v3 RayOrigin, v3 RayDir, scene* Scene, spatial_partition* Part
 {
 	ray_hit RayHit = {};
 	spatial_node* Node = Partition->RootNode;
+	s64 SpatialLeavesEntered = 0;
 	s64 SpatialNodesChecked = 0;
 	s64 ObjectsChecked = 0;
 	// Walk through spatial partition until Node is a leaf containing RayOrigin
@@ -965,8 +969,9 @@ RayIntersectScene(v3 RayOrigin, v3 RayDir, scene* Scene, spatial_partition* Part
 			Node = Node->Children[1];
 		}
 	}
-	while (Node)
+	while (Node && SpatialLeavesEntered < Partition->LeafCount)
 	{
+		++SpatialLeavesEntered;
 		for (s32 Index = 0; Index < Node->ObjectCount; ++Index)
 		{
 			++ObjectsChecked;
