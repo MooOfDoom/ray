@@ -643,7 +643,8 @@ main(int ArgCount, char** Args)
 				{
 					StartTime = std::chrono::high_resolution_clock::now();
 					
-					Partition = GenerateSpatialPartition(&Scene, Options.M, &Arena, &ScratchArena);
+					Partition = GenerateSpatialPartition(&Scene, &Arena, &ScratchArena,
+						Options.MaxObjectsPerLeaf, Options.MaxLeafDepth, Options.MaxDistance);
 					
 					EndTime = std::chrono::high_resolution_clock::now();
 					ElapsedTime = EndTime - StartTime;

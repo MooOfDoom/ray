@@ -58,7 +58,7 @@ RandomV3AvoidingPoint(random_sequence* RNG, v3 Point, f32 MinDist, f32 MaxCoord)
 }
 
 function b32
-WriteScene(const char* FileName, s32 NumObjects, f32 SceneSize, memory_arena* Arena)
+WriteScene(const char* FileName, s32 NumObjects, f32 SceneSize, s64 Seed, memory_arena* Arena)
 {
 	b32 Success = true;
 	FILE* DestFile = fopen(FileName, "wb");
@@ -74,7 +74,7 @@ WriteScene(const char* FileName, s32 NumObjects, f32 SceneSize, memory_arena* Ar
 		
 		buffer SceneBuffer = {0, TotalBuffer.Data};
 		
-		random_sequence RNG = SeedRandom(4815162342ull);
+		random_sequence RNG = SeedRandom(Seed);
 		
 		v3 CameraOrigin = {0, -0.75f*SceneSize, 0};
 		v3 CameraLookAt = {0, 0, 0};

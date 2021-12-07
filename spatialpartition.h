@@ -552,7 +552,7 @@ GetRelativeBoundingBox(object* Object, rect3 Bounds)
 }
 
 function spatial_partition
-GenerateSpatialPartition(scene* Scene, s32 MaxObjectsPerLeaf, s32 MaxLeafDepth, f32 MaxDistance, memory_arena* Arena, memory_arena* ScratchArena)
+GenerateSpatialPartition(scene* Scene, memory_arena* Arena, memory_arena* ScratchArena, s32 MaxObjectsPerLeaf, s32 MaxLeafDepth, f32 MaxDistance)
 {
 	spatial_partition Result = {};
 	if (Scene->ObjectCount > MaxObjectsPerLeaf)
