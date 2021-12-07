@@ -81,7 +81,7 @@ Writes some texture files in uncompressed .tga format into the data directory. S
 
 Writes a randomly generated scene to a specified .scn file. The number of objects and the side length of the scene bounds must be specified. Usage:
 
-% build/scenewriter <destfile.scn> <num objects> <scene size> [<rng seed>]
+% build/scenewriter \<destfile.scn\> \<num objects\> \<scene size\> [\<rng seed\>]
 
 E.g.:
 
