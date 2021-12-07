@@ -649,7 +649,7 @@ main(int ArgCount, char** Args)
 					EndTime = std::chrono::high_resolution_clock::now();
 					ElapsedTime = EndTime - StartTime;
 					printf("Time to build spatial partition: %6.4f (s) \n", ElapsedTime.count());
-					printf("Spatial Partition:\n");
+					// printf("Spatial Partition:\n");
 					// printf("\tRootNode:\n");
 					// PrintNode(Partition.RootNode, 2);
 					// printf("\t\tChild[0]:\n");
