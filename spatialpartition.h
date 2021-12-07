@@ -1365,10 +1365,10 @@ RayTrace(scene* Scene, spatial_partition* Partition, surface* Surface, s32 Sampl
 				}
 				Surface->Pixels[Y*Surface->Width + X] = PixelColor*SampleWeight;
 			}
-			s32 ThreadNum = omp_get_thread_num();
-			printf("--Thread %d done--\n", ThreadNum);
-			AllStats[ThreadNum] = Stats;
 		}
+		s32 ThreadNum = omp_get_thread_num();
+		printf("--Thread %d done--\n", ThreadNum);
+		AllStats[ThreadNum] = Stats;
 	}
 	PushArray(ScratchArena, NumThreads, ray_trace_stats); // Actually reserve the space :)
 	
