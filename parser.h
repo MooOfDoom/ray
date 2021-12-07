@@ -1495,70 +1495,78 @@ LoadTextures(tokenizer* Tokenizer, scene* DestScene, memory_arena* Arena)
 function b32
 LoadSceneFromFile(const char* FileName, scene* DestScene, memory_arena* Arena, memory_arena* ScratchArena)
 {
+	b32 Success = true;
 	temporary_memory Temp = BeginTemporaryMemory(ScratchArena);
 	buffer SceneBuffer = LoadEntireFile(FileName, ScratchArena);
 	
-	tokenizer Tokenizer = {};
-	Tokenizer.Buffer = SceneBuffer;
-	Tokenizer.Line = 1;
-	Tokenizer.Column = 1;
-	
-	// First read texture data if available
-	
-	token Token = NextToken(&Tokenizer);
-	if (Token.Type == Token_Textures)
+	if (SceneBuffer.Data)
 	{
-		LoadTextures(&Tokenizer, DestScene, Arena);
-		Token = NextToken(&Tokenizer);
-	}
-	
-	if (!Tokenizer.Error)
-	{
-		s64 OldAlignment = Arena->Alignment;
-		SetAlignment(Arena, 16);
-		DestScene->Objects = PushArray(Arena, 0, object);
-		SetAlignment(Arena, 1);
+		tokenizer Tokenizer = {};
+		Tokenizer.Buffer = SceneBuffer;
+		Tokenizer.Line = 1;
+		Tokenizer.Column = 1;
 		
-		while (HasMoreTokens(&Tokenizer) && !Tokenizer.Error)
+		// First read texture data if available
+		
+		token Token = NextToken(&Tokenizer);
+		if (Token.Type == Token_Textures)
 		{
-			if (Token.Type == Token_Plane)
-			{
-				ParsePlaneDecl(&Tokenizer, DestScene, Arena);
-			}
-			else if (Token.Type == Token_Sphere)
-			{
-				ParseSphereDecl(&Tokenizer, DestScene, Arena);
-			}
-			else if (Token.Type == Token_Triangle)
-			{
-				ParseTriangleDecl(&Tokenizer, DestScene, Arena);
-			}
-			else if (Token.Type == Token_Parallelogram)
-			{
-				ParseParallelogramDecl(&Tokenizer, DestScene, Arena);
-			}
-			else if (Token.Type == Token_Camera)
-			{
-				ParseCameraDecl(&Tokenizer, DestScene, Arena);
-			}
-			else if (Token.Type == Token_EOF)
-			{
-				break;
-			}
-			else
-			{
-				Tokenizer.Error = true;
-				fprintf(stderr, "(%d, %d): Expected object declaration, got '%.*s'\n", Token.Line, Token.Column, PrintString(Token.String));
-				break;
-			}
+			LoadTextures(&Tokenizer, DestScene, Arena);
 			Token = NextToken(&Tokenizer);
 		}
 		
-		SetAlignment(Arena, OldAlignment);
+		if (!Tokenizer.Error)
+		{
+			s64 OldAlignment = Arena->Alignment;
+			SetAlignment(Arena, 16);
+			DestScene->Objects = PushArray(Arena, 0, object);
+			SetAlignment(Arena, 1);
+			
+			while (HasMoreTokens(&Tokenizer) && !Tokenizer.Error)
+			{
+				if (Token.Type == Token_Plane)
+				{
+					ParsePlaneDecl(&Tokenizer, DestScene, Arena);
+				}
+				else if (Token.Type == Token_Sphere)
+				{
+					ParseSphereDecl(&Tokenizer, DestScene, Arena);
+				}
+				else if (Token.Type == Token_Triangle)
+				{
+					ParseTriangleDecl(&Tokenizer, DestScene, Arena);
+				}
+				else if (Token.Type == Token_Parallelogram)
+				{
+					ParseParallelogramDecl(&Tokenizer, DestScene, Arena);
+				}
+				else if (Token.Type == Token_Camera)
+				{
+					ParseCameraDecl(&Tokenizer, DestScene, Arena);
+				}
+				else if (Token.Type == Token_EOF)
+				{
+					break;
+				}
+				else
+				{
+					Tokenizer.Error = true;
+					fprintf(stderr, "(%d, %d): Expected object declaration, got '%.*s'\n", Token.Line, Token.Column, PrintString(Token.String));
+					break;
+				}
+				Token = NextToken(&Tokenizer);
+			}
+			
+			SetAlignment(Arena, OldAlignment);
+		}
+		
+		Success = !Tokenizer.Error;
+		EndTemporaryMemory(Temp);
+	}
+	else
+	{
+		Success = false;
 	}
 	
-	EndTemporaryMemory(Temp);
-	
-	b32 Success = !Tokenizer.Error;
 	return Success;
 }
