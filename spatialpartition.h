@@ -1205,7 +1205,8 @@ RayTrace(scene* Scene, spatial_partition* Partition, surface* Surface, s32 Sampl
 	s32 NumThreads;
 	#pragma omp parallel
 	{
-		if (omp_get_thread_num() == 0)
+		s32 ThreadNum = omp_get_thread_num();
+		if (ThreadNum == 0)
 		{
 			NumThreads = omp_get_num_threads();
 			printf("%d Threads...\n", NumThreads);
@@ -1215,7 +1216,7 @@ RayTrace(scene* Scene, spatial_partition* Partition, surface* Surface, s32 Sampl
 		#pragma omp for
 		for (s32 Y = 0; Y < Surface->Height; ++Y)
 		{
-			printf("%d\n", Y);
+			// printf("%d\n", Y);
 			random_sequence RNG = SeedRandom(4815162342ull*(Y + 1) + 1123581321ull); // Make sure each thread has own random sequence. This keeps it deterministic
 			for (s32 X = 0; X < Surface->Width; ++X)
 			{
@@ -1366,8 +1367,6 @@ RayTrace(scene* Scene, spatial_partition* Partition, surface* Surface, s32 Sampl
 				Surface->Pixels[Y*Surface->Width + X] = PixelColor*SampleWeight;
 			}
 		}
-		s32 ThreadNum = omp_get_thread_num();
-		printf("--Thread %d done--\n", ThreadNum);
 		AllStats[ThreadNum] = Stats;
 	}
 	PushArray(ScratchArena, NumThreads, ray_trace_stats); // Actually reserve the space :)
