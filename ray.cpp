@@ -649,28 +649,28 @@ main(int ArgCount, char** Args)
 					EndTime = std::chrono::high_resolution_clock::now();
 					ElapsedTime = EndTime - StartTime;
 					printf("Time to build spatial partition: %6.4f (s) \n", ElapsedTime.count());
-					printf("Spatial Partition:\n");
-					printf("\tRootNode:\n");
-					PrintNode(Partition.RootNode, 2);
-					printf("\t\tChild[0]:\n");
-					PrintNode(Partition.RootNode->Children[0], 3);
-					printf("\t\t\tChild[00]:\n");
-					PrintNode(Partition.RootNode->Children[0]->Children[0], 4);
-					printf("\t\t\tChild[01]:\n");
-					PrintNode(Partition.RootNode->Children[0]->Children[1], 4);
-					printf("\t\tChild[1]:\n");
-					PrintNode(Partition.RootNode->Children[1], 3);
-					printf("\tObjectCount = %d\n", Partition.ObjectCount);
-					printf("\tObjectIndices = [");
-					for (s32 Index = 0; Index < Partition.ObjectCount; ++Index)
-					{
-						if (Index > 0)
-						{
-							printf(", ");
-						}
-						printf("%d", Partition.ObjectIndices[Index]);
-					}
-					printf("]\n");
+					// printf("Spatial Partition:\n");
+					// printf("\tRootNode:\n");
+					// PrintNode(Partition.RootNode, 2);
+					// printf("\t\tChild[0]:\n");
+					// PrintNode(Partition.RootNode->Children[0], 3);
+					// printf("\t\t\tChild[00]:\n");
+					// PrintNode(Partition.RootNode->Children[0]->Children[0], 4);
+					// printf("\t\t\tChild[01]:\n");
+					// PrintNode(Partition.RootNode->Children[0]->Children[1], 4);
+					// printf("\t\tChild[1]:\n");
+					// PrintNode(Partition.RootNode->Children[1], 3);
+					// printf("\tObjectCount = %d\n", Partition.ObjectCount);
+					// printf("\tObjectIndices = [");
+					// for (s32 Index = 0; Index < Partition.ObjectCount; ++Index)
+					// {
+					// 	if (Index > 0)
+					// 	{
+					// 		printf(", ");
+					// 	}
+					// 	printf("%d", Partition.ObjectIndices[Index]);
+					// }
+					// printf("]\n");
 				}
 				f32 AspectRatio = Scene.Camera.SurfaceWidth / Scene.Camera.SurfaceHeight;
 				s32 HorizontalResolution = (s32)(AspectRatio * (f32)Options.VerticalResolution);
