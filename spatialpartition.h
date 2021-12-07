@@ -1215,7 +1215,7 @@ RayTrace(scene* Scene, spatial_partition* Partition, surface* Surface, s32 Sampl
 		#pragma omp for
 		for (s32 Y = 0; Y < Surface->Height; ++Y)
 		{
-			// printf("%d\n", Y);
+			printf("%d\n", Y);
 			random_sequence RNG = SeedRandom(4815162342ull*(Y + 1) + 1123581321ull); // Make sure each thread has own random sequence. This keeps it deterministic
 			for (s32 X = 0; X < Surface->Width; ++X)
 			{
