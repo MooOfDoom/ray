@@ -211,7 +211,7 @@ ReadString(tokenizer* Tokenizer)
 	Token.Line = Tokenizer->Line;
 	Token.Column = Tokenizer->Column;
 	
-	while (Tokenizer->Buffer.Count > 0 && Tokenizer->Buffer.Data[0] != '"')
+	while (Tokenizer->Buffer.Count > 0 && Tokenizer->Buffer.Data[0] != '"' && Tokenizer->Buffer.Data[0] != '\0')
 	{
 		++Token.String.Count;
 		Advance(Tokenizer);
@@ -1434,11 +1434,72 @@ ParseCameraDecl(tokenizer* Tokenizer, scene* DestScene, memory_arena* Arena)
 function void
 LoadTextures(tokenizer* Tokenizer, scene* DestScene, memory_arena* Arena)
 {
-	const s32 MAX_TEXTURES = 128;
-	DestScene->Textures = PushArray(Arena, MAX_TEXTURES, surface);
-	
 	DestScene->TextureCount = 0;
 	ExpectToken(Tokenizer, Token_LeftBrace);
+	tokenizer FirstPassTok = *Tokenizer;
+	tokenizer* FirstPass = &FirstPassTok;
+	while (HasMoreTokens(FirstPass) && !FirstPass->Error)
+	{
+		token Token = NextToken(FirstPass);
+		if (Token.Type == Token_RightBrace)
+		{
+			break;
+		}
+		else if (Token.Type == Token_Number)
+		{
+			s32 Index = (s32)Token.Value;
+			if (Index >= 1)
+			{
+				ExpectToken(FirstPass, Token_Equals);
+				Token = NextToken(FirstPass);
+				if (Token.Type != Token_String)
+				{
+					FirstPass->Error = true;
+					fprintf(stderr, "(%d, %d): Invalid token in texture declaration. Expected string, got '%.*s'\n", Token.Line, Token.Column, PrintString(Token.String));
+				}
+				
+				if (!FirstPass->Error)
+				{
+					if (Index >= DestScene->TextureCount)
+					{
+						DestScene->TextureCount = Index + 1;
+					}
+					// DestScene->Textures[Index] = LoadTGA((const char*)Token.String.Data, Arena);
+					Token = NextToken(FirstPass);
+					if (Token.Type == Token_RightBrace)
+					{
+						break;
+					}
+					else if (Token.Type != Token_Comma)
+					{
+						FirstPass->Error = true;
+						fprintf(stderr, "(%d, %d): Invalid token in textures declaration: '%.*s'\n", Token.Line, Token.Column, PrintString(Token.String));
+					}
+				}
+			}
+			else
+			{
+				FirstPass->Error = true;
+				fprintf(stderr, "(%d, %d): Texture index out of range: '%.*s'\n", Token.Line, Token.Column, PrintString(Token.String));
+			}
+		}
+		else
+		{
+			FirstPass->Error = true;
+			fprintf(stderr, "(%d, %d): Invalid token in textures declaration: '%.*s'\n", Token.Line, Token.Column, PrintString(Token.String));
+		}
+	}
+	
+	Tokenizer->Error = FirstPass->Error;
+	
+	if (!Tokenizer->Error)
+	{
+		if (DestScene->TextureCount > 0)
+		{
+			DestScene->Textures = PushArray(Arena, DestScene->TextureCount, surface);
+		}
+	}
+	
 	while (HasMoreTokens(Tokenizer) && !Tokenizer->Error)
 	{
 		token Token = NextToken(Tokenizer);
@@ -1449,45 +1510,19 @@ LoadTextures(tokenizer* Tokenizer, scene* DestScene, memory_arena* Arena)
 		else if (Token.Type == Token_Number)
 		{
 			s32 Index = (s32)Token.Value;
-			if (Index >= 0 && Index < MAX_TEXTURES)
-			{
-				ExpectToken(Tokenizer, Token_Equals);
-				Token = NextToken(Tokenizer);
-				if (Token.Type != Token_String)
-				{
-					Tokenizer->Error = true;
-					fprintf(stderr, "(%d, %d): Invalid token in texture declaration. Expected string, got '%.*s'\n", Token.Line, Token.Column, PrintString(Token.String));
-				}
-				
-				if (!Tokenizer->Error)
-				{
-					if (Index >= DestScene->TextureCount)
-					{
-						DestScene->TextureCount = Index + 1;
-					}
-					DestScene->Textures[Index] = LoadTGA((const char*)Token.String.Data, Arena);
-					Token = NextToken(Tokenizer);
-					if (Token.Type == Token_RightBrace)
-					{
-						break;
-					}
-					else if (Token.Type != Token_Comma)
-					{
-						Tokenizer->Error = true;
-						fprintf(stderr, "(%d, %d): Invalid token in textures declaration: '%.*s'\n", Token.Line, Token.Column, PrintString(Token.String));
-					}
-				}
-			}
-			else
+			ExpectToken(Tokenizer, Token_Equals);
+			Token = NextToken(Tokenizer);
+			DestScene->Textures[Index] = LoadTGA((const char*)Token.String.Data, Arena);
+			if (DestScene->Textures[Index].Pixels == 0)
 			{
 				Tokenizer->Error = true;
-				fprintf(stderr, "(%d, %d): Texture index out of range: '%.*s'\n", Token.Line, Token.Column, PrintString(Token.String));
+				fprintf(stderr, "(%d, %d): Could not load texture from file '%.*s'\n", Token.Line, Token.Column, PrintString(Token.String));
 			}
-		}
-		else
-		{
-			Tokenizer->Error = true;
-			fprintf(stderr, "(%d, %d): Invalid token in textures declaration: '%.*s'\n", Token.Line, Token.Column, PrintString(Token.String));
+			Token = NextToken(Tokenizer);
+			if (Token.Type == Token_RightBrace)
+			{
+				break;
+			}
 		}
 	}
 }
