@@ -425,7 +425,7 @@ ParseNumber(tokenizer* Tokenizer)
 }
 	
 function void
-ParseObjectProperties(tokenizer* Tokenizer, object* Object)
+ParseObjectProperties(tokenizer* Tokenizer, object* Object, scene* DestScene)
 {
 	ExpectToken(Tokenizer, Token_LeftBrace);
 	if (Tokenizer->Error)
@@ -593,11 +593,22 @@ ParseObjectProperties(tokenizer* Tokenizer, object* Object)
 			{
 				ReadTexture = true;
 				ExpectToken(Tokenizer, Token_Equals);
-				s32 Index = (s32)ParseNumber(Tokenizer);
+				f32 IndexF = ParseNumber(Tokenizer);
+				s32 Index = (s32)IndexF;
 				
 				if (Tokenizer->Error)
 				{
 					fprintf(stderr, "(%d, %d): Invalid object texture declaration\n", Token.Line, Token.Column);
+				}
+				else if ((f32)Index != IndexF || Index < 1 || Index > DestScene->TextureCount)
+				{
+					Tokenizer->Error = true;
+					fprintf(stderr, "(%d, %d): Invalid texture index: '%f'\n", Tokenizer->CurrentToken.Line, Tokenizer->CurrentToken.Column, IndexF);
+				}
+				else if (DestScene->Textures[Index - 1].Pixels == 0)
+				{
+					Tokenizer->Error = true;
+					fprintf(stderr, "(%d, %d): Texture index not found in texture table: '%d'\n", Tokenizer->CurrentToken.Line, Tokenizer->CurrentToken.Column, Index);
 				}
 				else
 				{
@@ -787,7 +798,7 @@ ParsePlaneDecl(tokenizer* Tokenizer, scene* DestScene, memory_arena* Arena)
 		}
 	}
 	
-	ParseObjectProperties(Tokenizer, &Object);
+	ParseObjectProperties(Tokenizer, &Object, DestScene);
 	
 	if (!Tokenizer->Error)
 	{
@@ -900,7 +911,7 @@ ParseSphereDecl(tokenizer* Tokenizer, scene* DestScene, memory_arena* Arena)
 		}
 	}
 	
-	ParseObjectProperties(Tokenizer, &Object);
+	ParseObjectProperties(Tokenizer, &Object, DestScene);
 	
 	if (!Tokenizer->Error)
 	{
@@ -1003,7 +1014,7 @@ ParseTriangleDecl(tokenizer* Tokenizer, scene* DestScene, memory_arena* Arena)
 		}
 	}
 	
-	ParseObjectProperties(Tokenizer, &Object);
+	ParseObjectProperties(Tokenizer, &Object, DestScene);
 	
 	if (!Tokenizer->Error)
 	{
@@ -1137,7 +1148,7 @@ ParseParallelogramDecl(tokenizer* Tokenizer, scene* DestScene, memory_arena* Are
 		}
 	}
 	
-	ParseObjectProperties(Tokenizer, &Object);
+	ParseObjectProperties(Tokenizer, &Object, DestScene);
 	
 	if (!Tokenizer->Error)
 	{
@@ -1158,9 +1169,9 @@ ParseCameraDecl(tokenizer* Tokenizer, scene* DestScene, memory_arena* Arena)
 	
 	// Default camera
 	DestScene->Camera.Origin = {0, 0, 0};
-	DestScene->Camera.XAxis = {1, 0, 0};
-	DestScene->Camera.YAxis = {0, 0, 1};
-	DestScene->Camera.ZAxis = {0, -1, 0};
+	DestScene->Camera.XAxis = {1.0f, 0, 0};
+	DestScene->Camera.YAxis = {0, 0, 1.0f};
+	DestScene->Camera.ZAxis = {0, -1.0f, 0};
 	DestScene->Camera.DistToSurface = 1.0f;
 	DestScene->Camera.SurfaceWidth = 1.0f;
 	DestScene->Camera.SurfaceHeight = 1.0f;
@@ -1502,6 +1513,10 @@ LoadTextures(tokenizer* Tokenizer, scene* DestScene, memory_arena* Arena)
 		if (TextureCount > 0)
 		{
 			DestScene->Textures = PushArray(Arena, TextureCount, surface);
+			for (s32 Index = 0; Index < TextureCount; ++Index)
+			{
+				DestScene->Textures[Index].Pixels = 0;
+			}
 		}
 	}
 	
@@ -1547,7 +1562,7 @@ LoadSceneFromFile(const char* FileName, scene* DestScene, memory_arena* Arena, m
 		Tokenizer.Column = 1;
 		
 		// First read texture data if available
-		
+		DestScene->TextureCount = 0;
 		token Token = NextToken(&Tokenizer);
 		if (Token.Type == Token_Textures)
 		{

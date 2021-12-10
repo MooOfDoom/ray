@@ -34,7 +34,12 @@ MakeArena(s64 Capacity, s64 Alignment)
 		.Alignment = Alignment,
 		.TempCount = 0,
 	};
-	assert(Arena.Start);
+	
+	if(!Arena.Start)
+	{
+		fprintf(stderr, "Fatal Error: Ran out of memory attempting to create an arena for %ld bytes.\n", Capacity);
+		exit(1);
+	}
 	
 	return Arena;
 }
@@ -54,7 +59,11 @@ function void*
 PushSize(memory_arena* Arena, s64 Size)
 {
 	u8* NewAllocStart = (u8*)AlignUp((s64)(Arena->Start + Arena->Allocated), Arena->Alignment);
-	assert(NewAllocStart + Size - Arena->Start <= Arena->Capacity);
+	if(NewAllocStart + Size - Arena->Start > Arena->Capacity)
+	{
+		fprintf(stderr, "Fatal Error: Ran out of memory attempting to allocate %ld bytes.\n", Size);
+		exit(1);
+	}
 	Arena->Allocated = NewAllocStart + Size - Arena->Start;
 	
 	return NewAllocStart;

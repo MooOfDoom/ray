@@ -1322,7 +1322,15 @@ RayTrace(scene* Scene, spatial_partition* Partition, surface* Surface, s32 Sampl
 									v2 SampleUV = Lerp(Hit.Object->UVMap.VertexUV[0], Hit.UV.U, Hit.Object->UVMap.VertexUV[1]) +
 										Lerp(Hit.Object->UVMap.VertexUV[0], Hit.UV.V, Hit.Object->UVMap.VertexUV[2]);
 									s32 SampleX = (s32)(SampleUV.U*(f32)Texture->Width) % Texture->Width;
+									if (SampleX < 0)
+									{
+										SampleX += Texture->Width;
+									}
 									s32 SampleY = (s32)(SampleUV.V*(f32)Texture->Height) % Texture->Height;
+									if (SampleY < 0)
+									{
+										SampleY += Texture->Height;
+									}
 									color TextureColor = Texture->Pixels[SampleY*Texture->Width + SampleX];
 									
 									if (DebugOn && Debug && !HitTexture && Bounce == 0)
