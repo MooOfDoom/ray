@@ -1,7 +1,7 @@
 /*
  * Ray
  *
- * Usage: ray <scene.scn> <render.tga>
+ * Main program in charge of reading command line arguments and performing ray tracing
  */
 
 #include <assert.h>
@@ -178,10 +178,15 @@ RayTrace(scene* Scene, surface* Surface, s32 SamplesPerPixel, s32 MaxBounces, me
 	s32 NumThreads;
 	#pragma omp parallel
 	{
-		if (omp_get_thread_num() == 0)
+		s32 ThreadNum = omp_get_thread_num();
+		if (ThreadNum == 0)
 		{
 			NumThreads = omp_get_num_threads();
 			printf("%d Threads...\n", NumThreads);
+			if (DebugOn)
+			{
+				printf("--DEBUG OUTPUT--\n");
+			}
 		}
 		
 		ray_trace_stats Stats = {};
@@ -340,11 +345,15 @@ RayTrace(scene* Scene, surface* Surface, s32 SamplesPerPixel, s32 MaxBounces, me
 				}
 				Surface->Pixels[Y*Surface->Width + X] = PixelColor*SampleWeight;
 			}
-			s32 ThreadNum = omp_get_thread_num();
-			AllStats[ThreadNum] = Stats;
 		}
+		AllStats[ThreadNum] = Stats;
 	}
 	PushArray(ScratchArena, NumThreads, ray_trace_stats); // Actually reserve the space :)
+	
+	if (DebugOn)
+	{
+		printf("----------------\n");
+	}
 	
 	ray_trace_stats OverallStats = {};
 	for (s32 Index = 0; Index < NumThreads; ++Index)
@@ -644,33 +653,60 @@ main(int ArgCount, char** Args)
 					StartTime = std::chrono::high_resolution_clock::now();
 					
 					Partition = GenerateSpatialPartition(&Scene, &Arena, &ScratchArena,
-						Options.MaxObjectsPerLeaf, Options.MaxLeafDepth, Options.MaxDistance);
+						Options.MaxObjectsPerLeaf, Options.MaxLeafDepth, Options.MaxDistance, Options.Debug);
 					
 					EndTime = std::chrono::high_resolution_clock::now();
 					ElapsedTime = EndTime - StartTime;
 					printf("Time to build spatial partition: %6.4f (s) \n", ElapsedTime.count());
-					// printf("Spatial Partition:\n");
-					// printf("\tRootNode:\n");
-					// PrintNode(Partition.RootNode, 2);
-					// printf("\t\tChild[0]:\n");
-					// PrintNode(Partition.RootNode->Children[0], 3);
-					// printf("\t\t\tChild[00]:\n");
-					// PrintNode(Partition.RootNode->Children[0]->Children[0], 4);
-					// printf("\t\t\tChild[01]:\n");
-					// PrintNode(Partition.RootNode->Children[0]->Children[1], 4);
-					// printf("\t\tChild[1]:\n");
-					// PrintNode(Partition.RootNode->Children[1], 3);
-					// printf("\tObjectCount = %d\n", Partition.ObjectCount);
-					// printf("\tObjectIndices = [");
-					// for (s32 Index = 0; Index < Partition.ObjectCount; ++Index)
-					// {
-					// 	if (Index > 0)
-					// 	{
-					// 		printf(", ");
-					// 	}
-					// 	printf("%d", Partition.ObjectIndices[Index]);
-					// }
-					// printf("]\n");
+					if (Options.Debug)
+					{
+						printf("--DEBUG OUTPUT--\n");
+						printf("Spatial Partition:\n");
+						printf("\tRootNode:\n");
+						PrintNode(Partition.RootNode, 2);
+						if (!Partition.RootNode->IsLeaf)
+						{
+							printf("\t\tChild[0]:\n");
+							PrintNode(Partition.RootNode->Children[0], 3);
+							if (!Partition.RootNode->Children[0]->IsLeaf)
+							{
+								printf("\t\t\tChild[00]:\n");
+								PrintNode(Partition.RootNode->Children[0]->Children[0], 4);
+								printf("\t\t\tChild[01]:\n");
+								PrintNode(Partition.RootNode->Children[0]->Children[1], 4);
+							}
+							printf("\t\tChild[1]:\n");
+							PrintNode(Partition.RootNode->Children[1], 3);
+							if (!Partition.RootNode->Children[1]->IsLeaf)
+							{
+								printf("\t\t\tChild[10]:\n");
+								PrintNode(Partition.RootNode->Children[1]->Children[0], 4);
+								printf("\t\t\tChild[11]:\n");
+								PrintNode(Partition.RootNode->Children[1]->Children[1], 4);
+							}
+						}
+						printf("\tObjectCount = %d\n", Partition.ObjectCount);
+						printf("\tObjectIndices = [");
+						s32 IndicesToPrint = 256;
+						if (Partition.ObjectCount < IndicesToPrint)
+						{
+							IndicesToPrint = Partition.ObjectCount;
+						}
+						for (s32 Index = 0; Index < IndicesToPrint; ++Index)
+						{
+							if (Index > 0)
+							{
+								printf(", ");
+							}
+							printf("%d", Partition.ObjectIndices[Index]);
+						}
+						if (IndicesToPrint < Partition.ObjectCount)
+						{
+							printf(", ... (%d more)", Partition.ObjectCount - IndicesToPrint);
+						}
+						printf("]\n");
+						printf("----------------\n");
+					}
 				}
 				f32 AspectRatio = Scene.Camera.SurfaceWidth / Scene.Camera.SurfaceHeight;
 				s32 HorizontalResolution = (s32)(AspectRatio * (f32)Options.VerticalResolution);

@@ -354,19 +354,10 @@ GetRelativeBoundingBox(object* Object, rect3 Bounds)
 			
 			Result.Min = Bounds.Max;
 			Result.Max = Bounds.Min;
-			// printf("Result: ");
-			// PrintRect(Result);
-			// printf("\n");
-			// printf("Bounds: ");
-			// PrintRect(Bounds);
-			// printf("\n");
-			// printf("Triangle:\n");
 			for (s32 TestIndex = 0; TestIndex < TestCount; ++TestIndex)
 			{
-				// printf("(%.2f, %.2f, %.2f)", TestVertices[TestIndex].X, TestVertices[TestIndex].Y, TestVertices[TestIndex].Z);
 				if (IsInside(TestVertices[TestIndex], Bounds))
 				{
-					// printf("[I]\n");
 					if (TestVertices[TestIndex].X < Result.Min.X)
 					{
 						Result.Min.X = TestVertices[TestIndex].X;
@@ -391,13 +382,8 @@ GetRelativeBoundingBox(object* Object, rect3 Bounds)
 					{
 						Result.Max.Z = TestVertices[TestIndex].Z;
 					}
-					// PrintRect(Result);
 				}
-				// printf("\n");
 			}
-			// printf("\nResult: ");
-			// PrintRect(Result);
-			// printf("\n");
 		} break;
 		
 		case Obj_Parallelogram:
@@ -498,19 +484,10 @@ GetRelativeBoundingBox(object* Object, rect3 Bounds)
 			
 			Result.Min = Bounds.Max;
 			Result.Max = Bounds.Min;
-			// printf("Result: ");
-			// PrintRect(Result);
-			// printf("\n");
-			// printf("Bounds: ");
-			// PrintRect(Bounds);
-			// printf("\n");
-			// printf("Parallelogram:\n");
 			for (s32 TestIndex = 0; TestIndex < TestCount; ++TestIndex)
 			{
-				// printf("(%.2f, %.2f, %.2f)", TestVertices[TestIndex].X, TestVertices[TestIndex].Y, TestVertices[TestIndex].Z);
 				if (IsInside(TestVertices[TestIndex], Bounds))
 				{
-					// printf("[I]\n");
 					if (TestVertices[TestIndex].X < Result.Min.X)
 					{
 						Result.Min.X = TestVertices[TestIndex].X;
@@ -535,13 +512,8 @@ GetRelativeBoundingBox(object* Object, rect3 Bounds)
 					{
 						Result.Max.Z = TestVertices[TestIndex].Z;
 					}
-					// PrintRect(Result);
 				}
-				// printf("\n");
 			}
-			// printf("\nResult: ");
-			// PrintRect(Result);
-			// printf("\n");
 		} break;
 		
 		default:
@@ -553,27 +525,35 @@ GetRelativeBoundingBox(object* Object, rect3 Bounds)
 }
 
 function spatial_partition
-GenerateSpatialPartition(scene* Scene, memory_arena* Arena, memory_arena* ScratchArena, s32 MaxObjectsPerLeaf, s32 MaxLeafDepth, f32 MaxDistance)
+GenerateSpatialPartition(scene* Scene, memory_arena* Arena, memory_arena* ScratchArena, s32 MaxObjectsPerLeaf, s32 MaxLeafDepth, f32 MaxDistance, b32 DebugOn)
 {
 	spatial_partition Result = {};
 	if (Scene->ObjectCount > MaxObjectsPerLeaf)
 	{
 		temporary_memory Temp = BeginTemporaryMemory(ScratchArena);
 		
-		// TODO: Will we need this?
 		rect3* ObjectBoundingBoxes = PushArray(ScratchArena, Scene->ObjectCount, rect3);
 		ObjectBoundingBoxes[0] = GetObjectBoundingBox(Scene->Objects + 0);
-		// printf("0: ");
-		// PrintRect(ObjectBoundingBoxes[0]);
+		if (DebugOn)
+		{
+			printf("--DEBUG OUTPUT--\n");
+			printf("Bounding Boxes:");
+			printf("0: ");
+			PrintRect(ObjectBoundingBoxes[0]);
+			printf("\n");
+		}
 		rect3 RootBounds = ObjectBoundingBoxes[0];
 		for (s32 Index = 1; Index < Scene->ObjectCount; ++Index)
 		{
 			ObjectBoundingBoxes[Index] = GetObjectBoundingBox(Scene->Objects + Index);
-			// printf("\n%d: ", Index);
-			// PrintRect(ObjectBoundingBoxes[Index]);
+			if (DebugOn)
+			{
+				printf("%d: ", Index);
+				PrintRect(ObjectBoundingBoxes[Index]);
+				printf("\n");
+			}
 			RootBounds = Union(RootBounds, ObjectBoundingBoxes[Index]);
 		}
-		// printf("\n");
 		
 		v3 MaxDistV = {MaxDistance, MaxDistance, MaxDistance};
 		rect3 CameraBounds =
@@ -660,39 +640,17 @@ GenerateSpatialPartition(scene* Scene, memory_arena* Arena, memory_arena* Scratc
 			}
 		}
 		
-		// printf("Initial: [");
-		// for (s32 Index = 0; Index < CountLow; ++Index)
-		// {
-		// 	if (Index != 0)
-		// 	{
-		// 		printf(", ");
-		// 	}
-		// 	printf("%d", TempObjectIndices[Index]);
-		// }
-		// printf(" | ");
-		// for (s32 Index = 0; Index < CountHigh; ++Index)
-		// {
-		// 	if (Index != 0)
-		// 	{
-		// 		printf(", ");
-		// 	}
-		// 	printf("%d", TempObjectIndices[CountLow + Index]);
-		// }
-		// printf("]\n");
-		
 		spatial_node* Nodes = PushArray(Arena, 2, spatial_node);
 		Result.RootNode->Children[0] = Nodes + 0;
 		Result.RootNode->Children[1] = Nodes + 1;
 		Nodes[0].Bounds = RootBounds;
 		Nodes[0].Bounds.Max.E[SplitAxisIndex] = SplitPoint;
 		Nodes[0].IsLeaf = -1; // Mark as unknown
-		// Nodes[0].SplitAxisIndex = SplitAxisIndex;
 		Nodes[0].FirstObjectIndex = 0;
 		Nodes[0].ObjectCount = CountLow;
 		Nodes[1].Bounds = RootBounds;
 		Nodes[1].Bounds.Min.E[SplitAxisIndex] = SplitPoint;
 		Nodes[1].IsLeaf = -1; // Mark as unknown
-		// Nodes[1].SplitAxisIndex = SplitAxisIndex;
 		Nodes[1].FirstObjectIndex = CountLow;
 		Nodes[1].ObjectCount = CountHigh;
 		
@@ -702,10 +660,16 @@ GenerateSpatialPartition(scene* Scene, memory_arena* Arena, memory_arena* Scratc
 		
 		for (s32 Depth = 0; Depth < MaxLeafDepth; ++Depth)
 		{
-			// printf("Depth: %d\n", Depth);
+			if (DebugOn)
+			{
+				printf("Depth: %d\n", Depth);
+			}
 			if (!HasRoom(ScratchArena, 2*TotalIndexCount*sizeof(s32)))
 			{
-				// printf("wrapped\n");
+				if (DebugOn)
+				{
+					printf("Wrapped scratch memory circular buffer!\n");
+				}
 				EndTemporaryMemory(CircularStart);
 				CircularStart = BeginTemporaryMemory(ScratchArena);
 			}
@@ -717,13 +681,11 @@ GenerateSpatialPartition(scene* Scene, memory_arena* Arena, memory_arena* Scratc
 				break;
 			}
 			
-			// printf("[");
 			s32 IndexCount = 0;
 			b32 NodeSplit = false;
 			s32 NextChildNodeCount = ChildNodeCount;
 			for (s32 NodeIndex = 0; NodeIndex < ChildNodeCount; ++NodeIndex)
 			{
-				// printf("\tIndex: %d\n", NodeIndex);
 				spatial_node* Node = Nodes + NodeIndex;
 				if ((Node->IsLeaf == -1) && (Node->ObjectCount > MaxObjectsPerLeaf))
 				{
@@ -737,17 +699,11 @@ GenerateSpatialPartition(scene* Scene, memory_arena* Arena, memory_arena* Scratc
 						s32 SplitCountLow = 0;
 						f32 LargestAxisSize = F32Min;
 						f32 LargestSplitCountLow = 0;
-						// printf("Split Node %d:\n", NodeIndex);
-						// PrintRect(Node->Bounds);
-						// printf("\n");
 						for (s32 Index = 0; Index < Node->ObjectCount; ++Index)
 						{
 							s32 ObjectIndex = TempObjectIndices[Node->FirstObjectIndex + Index];
 							object* Object = Scene->Objects + ObjectIndex;
 							ObjectBoundingBoxes[ObjectIndex] = GetRelativeBoundingBox(Object, Node->Bounds);
-							// printf("\t%d: ", ObjectIndex);
-							// PrintRect(ObjectBoundingBoxes[ObjectIndex]);
-							// printf("\n");
 						}
 						for (s32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
 						{
@@ -818,25 +774,6 @@ GenerateSpatialPartition(scene* Scene, memory_arena* Arena, memory_arena* Scratc
 							}
 						}
 						
-						// printf(" |? ");
-						// for (s32 Index = 0; Index < CountLow; ++Index)
-						// {
-						// 	if (Index != 0)
-						// 	{
-						// 		printf(", ");
-						// 	}
-						// 	printf("%d", NewTempObjectIndices[IndexCount + Index]);
-						// }
-						// printf(" |? ");
-						// for (s32 Index = 0; Index < CountHigh; ++Index)
-						// {
-						// 	if (Index != 0)
-						// 	{
-						// 		printf(", ");
-						// 	}
-						// 	printf("%d", NewTempObjectIndices[IndexCount + CountLow + Index]);
-						// }
-						
 						NextChildNodeCount += 2;
 						spatial_node* Children = PushArray(Arena, 2, spatial_node);
 						Node->Children[0] = Children + 0;
@@ -844,13 +781,11 @@ GenerateSpatialPartition(scene* Scene, memory_arena* Arena, memory_arena* Scratc
 						Children[0].Bounds = Node->Bounds;
 						Children[0].Bounds.Max.E[SplitAxisIndex] = SplitPoint;
 						Children[0].IsLeaf = -1; // Mark as unknown
-						// Children[0].SplitAxisIndex = SplitAxisIndex;
 						Children[0].FirstObjectIndex = IndexCount;
 						Children[0].ObjectCount = CountLow;
 						Children[1].Bounds = Node->Bounds;
 						Children[1].Bounds.Min.E[SplitAxisIndex] = SplitPoint;
 						Children[1].IsLeaf = -1; // Mark as unknown
-						// Children[1].SplitAxisIndex = SplitAxisIndex;
 						Children[1].FirstObjectIndex = IndexCount + CountLow;
 						Children[1].ObjectCount = CountHigh;
 						
@@ -865,16 +800,6 @@ GenerateSpatialPartition(scene* Scene, memory_arena* Arena, memory_arena* Scratc
 							NewTempObjectIndices[IndexCount + Index] = ObjectIndex;
 						}
 						Node->FirstObjectIndex = IndexCount;
-						
-						// printf(" |L ");
-						// for (s32 Index = 0; Index < Node->ObjectCount; ++Index)
-						// {
-						// 	if (Index != 0)
-						// 	{
-						// 		printf(", ");
-						// 	}
-						// 	printf("%d", NewTempObjectIndices[IndexCount + Index]);
-						// }
 						IndexCount += Node->ObjectCount;
 					}
 				}
@@ -887,20 +812,9 @@ GenerateSpatialPartition(scene* Scene, memory_arena* Arena, memory_arena* Scratc
 						NewTempObjectIndices[IndexCount + Index] = ObjectIndex;
 					}
 					Node->FirstObjectIndex = IndexCount;
-					
-					// printf(" |L ");
-					// for (s32 Index = 0; Index < Node->ObjectCount; ++Index)
-					// {
-					// 	if (Index != 0)
-					// 	{
-					// 		printf(", ");
-					// 	}
-					// 	printf("%d", NewTempObjectIndices[IndexCount + Index]);
-					// }
 					IndexCount += Node->ObjectCount;
 				}
 			}
-			// printf("]\n");
 			
 			ChildNodeCount = NextChildNodeCount;
 			TotalIndexCount = IndexCount;
@@ -911,6 +825,10 @@ GenerateSpatialPartition(scene* Scene, memory_arena* Arena, memory_arena* Scratc
 			{
 				break;
 			}
+		}
+		if (DebugOn)
+		{
+			printf("----------------\n");
 		}
 		
 		for (s32 Index = 0; Index < ChildNodeCount; ++Index)
@@ -1215,6 +1133,10 @@ RayTrace(scene* Scene, spatial_partition* Partition, surface* Surface, s32 Sampl
 		{
 			NumThreads = omp_get_num_threads();
 			printf("%d Threads...\n", NumThreads);
+			if (DebugOn)
+			{
+				printf("--DEBUG OUTPUT--\n");
+			}
 		}
 		
 		ray_trace_stats Stats = {};
@@ -1383,6 +1305,11 @@ RayTrace(scene* Scene, spatial_partition* Partition, surface* Surface, s32 Sampl
 		AllStats[ThreadNum] = Stats;
 	}
 	PushArray(ScratchArena, NumThreads, ray_trace_stats); // Actually reserve the space :)
+	
+	if (DebugOn)
+	{
+		printf("----------------\n");
+	}
 	
 	ray_trace_stats OverallStats = {};
 	for (s32 Index = 0; Index < NumThreads; ++Index)
