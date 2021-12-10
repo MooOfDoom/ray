@@ -1434,7 +1434,7 @@ ParseCameraDecl(tokenizer* Tokenizer, scene* DestScene, memory_arena* Arena)
 function void
 LoadTextures(tokenizer* Tokenizer, scene* DestScene, memory_arena* Arena)
 {
-	DestScene->TextureCount = 0;
+	s32 TextureCount = 0;
 	ExpectToken(Tokenizer, Token_LeftBrace);
 	tokenizer FirstPassTok = *Tokenizer;
 	tokenizer* FirstPass = &FirstPassTok;
@@ -1448,7 +1448,12 @@ LoadTextures(tokenizer* Tokenizer, scene* DestScene, memory_arena* Arena)
 		else if (Token.Type == Token_Number)
 		{
 			s32 Index = (s32)Token.Value;
-			if (Index >= 1)
+			if ((f32)Index != Token.Value)
+			{
+				FirstPass->Error = true;
+				fprintf(stderr, "(%d, %d): Texture index not an integer: '%.*s'\n", Token.Line, Token.Column, PrintString(Token.String));
+			}
+			else if (Index >= 1)
 			{
 				ExpectToken(FirstPass, Token_Equals);
 				Token = NextToken(FirstPass);
@@ -1460,11 +1465,10 @@ LoadTextures(tokenizer* Tokenizer, scene* DestScene, memory_arena* Arena)
 				
 				if (!FirstPass->Error)
 				{
-					if (Index >= DestScene->TextureCount)
+					if (Index > TextureCount)
 					{
-						DestScene->TextureCount = Index + 1;
+						TextureCount = Index;
 					}
-					// DestScene->Textures[Index] = LoadTGA((const char*)Token.String.Data, Arena);
 					Token = NextToken(FirstPass);
 					if (Token.Type == Token_RightBrace)
 					{
@@ -1494,9 +1498,10 @@ LoadTextures(tokenizer* Tokenizer, scene* DestScene, memory_arena* Arena)
 	
 	if (!Tokenizer->Error)
 	{
-		if (DestScene->TextureCount > 0)
+		DestScene->TextureCount = TextureCount;
+		if (TextureCount > 0)
 		{
-			DestScene->Textures = PushArray(Arena, DestScene->TextureCount, surface);
+			DestScene->Textures = PushArray(Arena, TextureCount, surface);
 		}
 	}
 	
@@ -1509,7 +1514,7 @@ LoadTextures(tokenizer* Tokenizer, scene* DestScene, memory_arena* Arena)
 		}
 		else if (Token.Type == Token_Number)
 		{
-			s32 Index = (s32)Token.Value;
+			s32 Index = (s32)Token.Value - 1;
 			ExpectToken(Tokenizer, Token_Equals);
 			Token = NextToken(Tokenizer);
 			DestScene->Textures[Index] = LoadTGA((const char*)Token.String.Data, Arena);
