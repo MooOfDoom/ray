@@ -196,7 +196,7 @@ RayTrace(scene* Scene, surface* Surface, s32 SamplesPerPixel, s32 MaxBounces, me
 			random_sequence RNG = SeedRandom(4815162342ull*(Y + 1) + 1123581321ull); // Make sure each thread has own random sequence. This keeps it deterministic
 			for (s32 X = 0; X < Surface->Width; ++X)
 			{
-				color PixelColor = {0};
+				color PixelColor = {};
 				for (s32 J = 0; J < SamplesPerPixel; ++J)
 				{
 					for (s32 I = 0; I < SamplesPerPixel; ++I)

@@ -1113,7 +1113,6 @@ RayTrace(scene* Scene, spatial_partition* Partition, surface* Surface, s32 Sampl
 {
 	temporary_memory Temp = BeginTemporaryMemory(ScratchArena);
 	b32 HitTexture = false; // Debug purposes
-	s32 HitTranslucency = 0; // Debug purposes
 	
 	f32 PixelWidth = Scene->Camera.SurfaceWidth / (f32)Surface->Width;
 	f32 PixelHeight = Scene->Camera.SurfaceHeight / (f32)Surface->Height;
@@ -1143,11 +1142,14 @@ RayTrace(scene* Scene, spatial_partition* Partition, surface* Surface, s32 Sampl
 		#pragma omp for
 		for (s32 Y = 0; Y < Surface->Height; ++Y)
 		{
-			// printf("%d\n", Y);
+			if (DebugOn)
+			{
+				printf("Y=%d\n", Y);
+			}
 			random_sequence RNG = SeedRandom(4815162342ull*(Y + 1) + 1123581321ull); // Make sure each thread has own random sequence. This keeps it deterministic
 			for (s32 X = 0; X < Surface->Width; ++X)
 			{
-				color PixelColor = {0};
+				color PixelColor = {};
 				for (s32 J = 0; J < SamplesPerPixel; ++J)
 				{
 					for (s32 I = 0; I < SamplesPerPixel; ++I)
@@ -1206,21 +1208,6 @@ RayTrace(scene* Scene, spatial_partition* Partition, surface* Surface, s32 Sampl
 									}
 									v3 OldRayDir = RayDir;
 									RayDir = NormOrZero(RayDir - (1.0f - RefractionCoeff)*ParallelComponent);
-									if (DebugOn && HitTranslucency < 10)
-									{
-										++HitTranslucency;
-										Debug = true;
-										printf("Translucency hit! HitAt(%.2f,%.2f,%.2f)\n",
-										RayOrigin.X, RayOrigin.Y, RayOrigin.Z);
-										printf("Bounce(%d) ObjectType(%d) Translucency(%.2f) RefractionCoeff(%.2f)\n",
-											Bounce, Hit.Object->Type, Hit.Object->Translucency, RefractionCoeff);
-										printf("Normal(%.2f,%.2f,%.2f) OldRayDir(%.2f,%.2f,%.2f) NewRayDir(%.2f,%.2f,%.2f)\n",
-											Hit.Normal.X, Hit.Normal.Y, Hit.Normal.Z,
-											OldRayDir.X, OldRayDir.Y, OldRayDir.Z,
-											RayDir.X, RayDir.Y, RayDir.Z);
-										printf("RayDDotNormal(%.2f)\n",
-											RayDDotNormal);
-									}
 								}
 								else
 								{
@@ -1265,8 +1252,6 @@ RayTrace(scene* Scene, spatial_partition* Partition, surface* Surface, s32 Sampl
 										printf("SampleUV(%.2f,%.2f) SampleX(%d) SampleY(%d)\n",
 											SampleUV.U, SampleUV.V, SampleX, SampleY);
 									}
-									
-									// TextureColor = (color){Hit.UV.U < 0.5f ? 0 : 1.0f, Hit.UV.V < 0.5f ? 0 : 1.0f, 0};
 									
 									SampleColor.R *= TextureColor.R*Falloff;
 									SampleColor.G *= TextureColor.G*Falloff;
