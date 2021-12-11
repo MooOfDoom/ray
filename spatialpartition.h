@@ -1206,7 +1206,6 @@ RayTrace(scene* Scene, spatial_partition* Partition, surface* Surface, s32 Sampl
 									{
 										RefractionCoeff = 1.0f / RefractionCoeff;
 									}
-									v3 OldRayDir = RayDir;
 									RayDir = NormOrZero(RayDir - (1.0f - RefractionCoeff)*ParallelComponent);
 								}
 								else
